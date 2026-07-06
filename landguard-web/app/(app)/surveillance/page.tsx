@@ -12,6 +12,7 @@ import { useEffect } from "react"
 import { Radar, Scan, ShieldAlert, Cpu } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { MonitoringRadar } from "@/components/app/monitoring/monitoring-radar"
+import { AlertPreferences } from "@/components/app/monitoring/alert-preferences"
 
 import { AppErrorBoundary } from "@/components/app/error-boundary"
 
@@ -116,6 +117,7 @@ export default function SurveillancePage() {
               <MonitoringRadar />
             </div>
             <MonitoringLiveFeed />
+            <AlertPreferences />
           </div>
         </div>
       </div>

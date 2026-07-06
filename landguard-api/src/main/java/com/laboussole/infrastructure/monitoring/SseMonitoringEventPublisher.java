@@ -47,11 +47,23 @@ public class SseMonitoringEventPublisher implements MonitoringEventPublisher {
 
     @Override
     public void publish(MonitoringEvent event) {
+        broadcast("monitoring-event", event);
+    }
+
+    /**
+     * High-priority alert push, sent under its own SSE event name so clients
+     * can surface it (toast/notification) distinctly from the regular feed.
+     */
+    public void publishAlert(MonitoringEvent event) {
+        broadcast("alert", event);
+    }
+
+    private void broadcast(String eventName, MonitoringEvent event) {
         this.emitters.forEach(emitter -> {
             synchronized (emitter) {
                 try {
                     emitter.send(SseEmitter.event()
-                            .name("monitoring-event")
+                            .name(eventName)
                             .data(event));
                 } catch (Exception e) {
                     log.warn("Failed to send event to emitter, removing it", e);
