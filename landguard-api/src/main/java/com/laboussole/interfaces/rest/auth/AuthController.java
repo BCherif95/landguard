@@ -69,14 +69,22 @@ class AuthController {
         return AuthResponse.of(result.user(), result.tokens());
     }
 
-    @Operation(summary = "Rotate the refresh token and mint a fresh access token.")
+    @Operation(
+            summary = "Exchange a valid refresh token for a fresh access+refresh pair.",
+            description = "Stateless: the refresh token is a signed JWT verified by signature and "
+                    + "embedded expiration; no server-side session is kept. A token remains usable "
+                    + "until it expires — there is no server-side revocation.")
     @PostMapping("/refresh")
     public AuthResponse refresh(@Valid @RequestBody RefreshRequest request) {
         var tokens = refreshUseCase.execute(new RefreshAccessTokenUseCase.Command(request.refreshToken()));
         return AuthResponse.tokensOnly(tokens);
     }
 
-    @Operation(summary = "Revoke a refresh token. Idempotent.")
+    @Operation(
+            summary = "Confirm logout. Idempotent.",
+            description = "Stateless tokens cannot be revoked server-side: this endpoint only "
+                    + "acknowledges the logout. Clients MUST discard both tokens locally; issued "
+                    + "tokens stay valid until their embedded expiration.")
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(@RequestBody(required = false) LogoutRequest request) {
         var token = request == null ? null : request.refreshToken();

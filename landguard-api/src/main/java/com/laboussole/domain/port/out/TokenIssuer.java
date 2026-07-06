@@ -7,26 +7,29 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 
-/** Driven port: signs and verifies short-lived access tokens (JWT in the JWT adapter). */
+/**
+ * Driven port: signs and verifies self-contained tokens (JWT in the JWT adapter).
+ *
+ * <p>Both the access token and the refresh token are signed and carry their own
+ * expiration, so no server-side token state is required.
+ */
 public interface TokenIssuer {
 
-    IssuedAccessToken issueAccessToken(UserId userId, Role role);
+    IssuedToken issueAccessToken(UserId userId, Role role);
 
-    Optional<VerifiedAccessToken> verifyAccessToken(String compactToken);
+    Optional<VerifiedToken> verifyAccessToken(String compactToken);
 
-    /** Generates an opaque, high-entropy refresh token plus its storable hash. */
-    OpaqueRefreshToken issueRefreshToken();
+    /** Issues a signed, self-expiring refresh token. Nothing is persisted server-side. */
+    IssuedToken issueRefreshToken(UserId userId, Role role);
 
-    /** Hashes a presented refresh token for repository lookup. Same algorithm as {@link #issueRefreshToken()}. */
-    String hashRefreshToken(String plaintext);
+    /** Verifies signature, expiration, and that the token is a refresh token (not an access token). */
+    Optional<VerifiedToken> verifyRefreshToken(String compactToken);
 
     Duration accessTokenTtl();
 
     Duration refreshTokenTtl();
 
-    record IssuedAccessToken(String compactToken, Instant expiresAt) {}
+    record IssuedToken(String compactToken, Instant expiresAt) {}
 
-    record VerifiedAccessToken(UserId userId, Role role, Instant expiresAt) {}
-
-    record OpaqueRefreshToken(String plaintext, String hash) {}
+    record VerifiedToken(UserId userId, Role role, Instant expiresAt) {}
 }

@@ -53,6 +53,12 @@ class GlobalExceptionHandler {
         return body(HttpStatus.NOT_FOUND, ex.code(), "Parcelle introuvable.", req);
     }
 
+    @ExceptionHandler(com.laboussole.domain.exception.OcrExtractionNotFoundException.class)
+    ResponseEntity<ApiError> ocrExtractionNotFound(
+            com.laboussole.domain.exception.OcrExtractionNotFoundException ex, HttpServletRequest req) {
+        return body(HttpStatus.NOT_FOUND, ex.code(), "Analyse OCR introuvable pour ce document.", req);
+    }
+
     @ExceptionHandler(CadastralReferenceTakenException.class)
     ResponseEntity<ApiError> cadastralTaken(CadastralReferenceTakenException ex, HttpServletRequest req) {
         return body(HttpStatus.CONFLICT, ex.code(), "Cette référence cadastrale est déjà enregistrée.", req);

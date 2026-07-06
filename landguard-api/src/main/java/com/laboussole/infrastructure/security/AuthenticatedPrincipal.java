@@ -8,4 +8,13 @@ import com.laboussole.domain.model.UserId;
  * rather than on the full {@code User} aggregate (which lives in domain).
  */
 public record AuthenticatedPrincipal(UserId userId, Role role) {
+
+    public boolean hasAnyRole(Role... roles) {
+        for (Role candidate : roles) {
+            if (role == candidate) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

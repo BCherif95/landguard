@@ -4,11 +4,9 @@ import com.laboussole.domain.exception.InvalidCredentialsException;
 import com.laboussole.domain.exception.UserDisabledException;
 import com.laboussole.domain.model.AuthTokens;
 import com.laboussole.domain.model.Email;
-import com.laboussole.domain.model.RefreshToken;
 import com.laboussole.domain.model.User;
 import com.laboussole.domain.port.in.AuthenticateUserUseCase;
 import com.laboussole.domain.port.out.PasswordHasher;
-import com.laboussole.domain.port.out.RefreshTokenRepository;
 import com.laboussole.domain.port.out.TokenIssuer;
 import com.laboussole.domain.port.out.UserRepository;
 import org.springframework.stereotype.Service;
@@ -18,17 +16,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthenticateUserService implements AuthenticateUserUseCase {
 
     private final UserRepository users;
-    private final RefreshTokenRepository refreshTokens;
     private final PasswordHasher passwordHasher;
     private final TokenIssuer tokenIssuer;
 
     public AuthenticateUserService(
             UserRepository users,
-            RefreshTokenRepository refreshTokens,
             PasswordHasher passwordHasher,
             TokenIssuer tokenIssuer) {
         this.users = users;
-        this.refreshTokens = refreshTokens;
         this.passwordHasher = passwordHasher;
         this.tokenIssuer = tokenIssuer;
     }
@@ -64,14 +59,12 @@ public class AuthenticateUserService implements AuthenticateUserUseCase {
 
     private AuthTokens mintTokens(User user) {
         var access = tokenIssuer.issueAccessToken(user.id(), user.role());
-        var refresh = tokenIssuer.issueRefreshToken();
-        var stored = RefreshToken.issue(user.id(), refresh.hash(), tokenIssuer.refreshTokenTtl());
-        refreshTokens.save(stored);
+        var refresh = tokenIssuer.issueRefreshToken(user.id(), user.role());
         return new AuthTokens(
                 access.compactToken(),
                 access.expiresAt(),
-                refresh.plaintext(),
-                stored.expiresAt(),
+                refresh.compactToken(),
+                refresh.expiresAt(),
                 user.id());
     }
 }

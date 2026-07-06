@@ -11,14 +11,10 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Date;
-import java.util.HexFormat;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -26,64 +22,38 @@ import java.util.UUID;
 class JwtTokenIssuer implements TokenIssuer {
 
     private static final String CLAIM_ROLE = "role";
+    private static final String CLAIM_TYPE = "type";
+    private static final String TYPE_ACCESS = "access";
+    private static final String TYPE_REFRESH = "refresh";
 
     private final JwtProperties properties;
-    private final SecretKey signingKey;
-    private final SecureRandom random = new SecureRandom();
+    private final SecretKey accessSigningKey;
+    private final SecretKey refreshSigningKey;
 
     JwtTokenIssuer(JwtProperties properties) {
         this.properties = properties;
-        this.signingKey = Keys.hmacShaKeyFor(decodeSecret(properties.secret()));
+        this.accessSigningKey = Keys.hmacShaKeyFor(decodeSecret(properties.secret()));
+        this.refreshSigningKey = Keys.hmacShaKeyFor(decodeSecret(properties.effectiveRefreshSecret()));
     }
 
     @Override
-    public IssuedAccessToken issueAccessToken(UserId userId, Role role) {
-        var now = Instant.now();
-        var expiresAt = now.plus(properties.accessTokenTtl());
-        var compact = Jwts.builder()
-                .issuer(properties.issuer())
-                .subject(userId.asString())
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(expiresAt))
-                .claim(CLAIM_ROLE, role.name())
-                .signWith(signingKey)
-                .compact();
-        return new IssuedAccessToken(compact, expiresAt);
+    public IssuedToken issueAccessToken(UserId userId, Role role) {
+        return issue(userId, role, TYPE_ACCESS, properties.accessTokenTtl(), accessSigningKey);
     }
 
     @Override
-    public Optional<VerifiedAccessToken> verifyAccessToken(String compactToken) {
-        try {
-            Claims claims = Jwts.parser()
-                    .verifyWith(signingKey)
-                    .requireIssuer(properties.issuer())
-                    .build()
-                    .parseSignedClaims(compactToken)
-                    .getPayload();
-            var userId = UserId.of(UUID.fromString(claims.getSubject()));
-            var role = Role.valueOf(claims.get(CLAIM_ROLE, String.class));
-            return Optional.of(new VerifiedAccessToken(userId, role, claims.getExpiration().toInstant()));
-        } catch (JwtException | IllegalArgumentException e) {
-            return Optional.empty();
-        }
+    public Optional<VerifiedToken> verifyAccessToken(String compactToken) {
+        return verify(compactToken, TYPE_ACCESS, accessSigningKey);
     }
 
     @Override
-    public OpaqueRefreshToken issueRefreshToken() {
-        var bytes = new byte[48];
-        random.nextBytes(bytes);
-        var plaintext = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-        return new OpaqueRefreshToken(plaintext, hashRefreshToken(plaintext));
+    public IssuedToken issueRefreshToken(UserId userId, Role role) {
+        return issue(userId, role, TYPE_REFRESH, properties.refreshTokenTtl(), refreshSigningKey);
     }
 
     @Override
-    public String hashRefreshToken(String plaintext) {
-        try {
-            var digest = MessageDigest.getInstance("SHA-256");
-            return HexFormat.of().formatHex(digest.digest(plaintext.getBytes(StandardCharsets.UTF_8)));
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 unavailable", e);
-        }
+    public Optional<VerifiedToken> verifyRefreshToken(String compactToken) {
+        return verify(compactToken, TYPE_REFRESH, refreshSigningKey);
     }
 
     @Override
@@ -94,6 +64,44 @@ class JwtTokenIssuer implements TokenIssuer {
     @Override
     public Duration refreshTokenTtl() {
         return properties.refreshTokenTtl();
+    }
+
+    private IssuedToken issue(UserId userId, Role role, String type, Duration ttl, SecretKey key) {
+        var now = Instant.now();
+        var expiresAt = now.plus(ttl);
+        var compact = Jwts.builder()
+                .issuer(properties.issuer())
+                .subject(userId.asString())
+                .id(UUID.randomUUID().toString())
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(expiresAt))
+                .claim(CLAIM_ROLE, role.name())
+                .claim(CLAIM_TYPE, type)
+                .signWith(key)
+                .compact();
+        return new IssuedToken(compact, expiresAt);
+    }
+
+    private Optional<VerifiedToken> verify(String compactToken, String expectedType, SecretKey key) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(key)
+                    .requireIssuer(properties.issuer())
+                    .build()
+                    .parseSignedClaims(compactToken)
+                    .getPayload();
+            // The type claim prevents an access token from being replayed as a refresh
+            // token (and vice versa) when both kinds share the same signing key.
+            var type = claims.get(CLAIM_TYPE, String.class);
+            if (!expectedType.equals(type)) {
+                return Optional.empty();
+            }
+            var userId = UserId.of(UUID.fromString(claims.getSubject()));
+            var role = Role.valueOf(claims.get(CLAIM_ROLE, String.class));
+            return Optional.of(new VerifiedToken(userId, role, claims.getExpiration().toInstant()));
+        } catch (JwtException | IllegalArgumentException e) {
+            return Optional.empty();
+        }
     }
 
     private static byte[] decodeSecret(String secret) {
