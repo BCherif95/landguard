@@ -4,12 +4,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { parcelsApi, type RegisterParcelPayload, type ParcelStatus } from "@/lib/api/parcels"
 
 const KEYS = {
-  list: (params?: { ownerUserId?: string; limit?: number }) =>
+  list: (params?: { limit?: number }) =>
     ["parcels", "list", params ?? null] as const,
   detail: (id: string) => ["parcels", "detail", id] as const,
 }
 
-export function useParcels(params?: { ownerUserId?: string; limit?: number }) {
+export function useParcels(params?: { limit?: number }) {
   return useQuery({
     queryKey: KEYS.list(params),
     queryFn: () => parcelsApi.list(params),

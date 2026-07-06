@@ -1,6 +1,5 @@
 package com.laboussole.interfaces.rest.parcel;
 
-import com.laboussole.domain.model.UserId;
 import com.laboussole.domain.model.parcel.ParcelId;
 import com.laboussole.domain.port.in.GetLandParcelUseCase;
 import com.laboussole.domain.port.in.ListLandParcelsUseCase;
@@ -27,7 +26,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/parcels")
@@ -60,23 +58,26 @@ class ParcelController {
         this.pdfService = pdfService;
     }
 
-    @Operation(summary = "List parcels (most recent first). Defaults to 100, max 500.")
+    @Operation(summary = "List parcels visible to the authenticated user (most recent first). "
+            + "Citizens see their own parcels; officers, legal users and admins see the full registry. "
+            + "Defaults to 100, max 500.")
     @GetMapping
     public List<ParcelResponse> list(
-            @RequestParam(value = "ownerUserId", required = false) String ownerUserId,
-            @RequestParam(value = "limit", defaultValue = "100") int limit) {
-        var owner = ownerUserId == null || ownerUserId.isBlank()
-                ? Optional.<UserId>empty()
-                : Optional.of(UserId.of(ownerUserId));
-        return listUseCase.execute(new ListLandParcelsUseCase.Query(owner, limit)).stream()
+            @RequestParam(value = "limit", defaultValue = "100") int limit,
+            @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        var query = new ListLandParcelsUseCase.Query(principal.userId(), principal.role(), limit);
+        return listUseCase.execute(query).stream()
                 .map(ParcelResponse::from)
                 .toList();
     }
 
-    @Operation(summary = "Get a parcel by id.")
+    @Operation(summary = "Get a parcel by id, if visible to the authenticated user.")
     @GetMapping("/{id}")
-    public ParcelResponse get(@PathVariable("id") String id) {
-        var parcel = getUseCase.execute(ParcelId.of(id));
+    public ParcelResponse get(
+            @PathVariable("id") String id,
+            @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        var parcel = getUseCase.execute(new GetLandParcelUseCase.Query(
+                ParcelId.of(id), principal.userId(), principal.role()));
         return ParcelResponse.from(parcel);
     }
 
@@ -141,8 +142,11 @@ class ParcelController {
 
     @Operation(summary = "Download the official Land Title (TF) PDF.")
     @GetMapping("/{id}/title-pdf")
-    public ResponseEntity<byte[]> downloadTitle(@PathVariable("id") String id) {
-        var parcel = getUseCase.execute(ParcelId.of(id));
+    public ResponseEntity<byte[]> downloadTitle(
+            @PathVariable("id") String id,
+            @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        var parcel = getUseCase.execute(new GetLandParcelUseCase.Query(
+                ParcelId.of(id), principal.userId(), principal.role()));
         if (parcel.status() != com.laboussole.domain.model.parcel.ParcelStatus.TITLE_ISSUED) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }

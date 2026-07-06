@@ -101,8 +101,28 @@ export interface UploadDocumentResponse {
   uploadedAt: string
 }
 
+/**
+ * OCR reading of an uploaded document. Advisory only: it pre-fills the
+ * wizard and flags anomalies — final validation is always human.
+ */
+export interface OcrExtraction {
+  id: string
+  storageKey: string
+  documentType: string
+  status: "PENDING_VERIFICATION" | "FAILED"
+  titleNumber: string | null
+  ownerName: string | null
+  surfaceAreaHectares: number | string | null
+  structuralAnomalies: string[]
+  extractedAt: string
+}
+
 export const parcelsApi = {
-  list: async (params?: { ownerUserId?: string; limit?: number }): Promise<Parcel[]> => {
+  /**
+   * Visibility is enforced server-side from the authenticated user:
+   * citizens receive their own parcels, officials receive the full registry.
+   */
+  list: async (params?: { limit?: number }): Promise<Parcel[]> => {
     const { data } = await api.get<Parcel[]>("/parcels", { params })
     return data
   },
@@ -139,14 +159,22 @@ export const parcelsApi = {
     return `${api.defaults.baseURL}/parcels/${id}/title-pdf`
   },
 
-  uploadDocument: async (file: File): Promise<UploadDocumentResponse> => {
+  uploadDocument: async (file: File, type?: string): Promise<UploadDocumentResponse> => {
     const formData = new FormData()
     formData.append("file", file)
+    if (type) {
+      formData.append("type", type)
+    }
     const { data } = await api.post<UploadDocumentResponse>("/documents/upload", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
     })
+    return data
+  },
+
+  getDocumentOcrExtraction: async (id: string): Promise<OcrExtraction> => {
+    const { data } = await api.get<OcrExtraction>(`/documents/${id}/ocr-extraction`)
     return data
   },
 }
