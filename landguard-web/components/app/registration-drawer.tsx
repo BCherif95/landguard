@@ -15,16 +15,9 @@ import { ConfirmationStep } from "./parcels/parcel-registration/confirmation-ste
 import { DocumentsStep } from "./parcels/parcel-registration/documents-step"
 import { cn } from "@/lib/utils"
 import { Check, ShieldCheck } from "lucide-react"
-import { useEffect } from "react"
 
 export function RegistrationDrawer() {
   const { isOpen, closeDrawer, currentStep } = useRegistrationFlowStore()
-
-  useEffect(() => {
-    if (isOpen) {
-      console.log("Registration Drawer opened at step:", currentStep)
-    }
-  }, [isOpen, currentStep])
 
   const renderStep = () => {
     switch (currentStep) {
@@ -39,7 +32,6 @@ export function RegistrationDrawer() {
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => {
-      console.log("Drawer onOpenChange:", open)
       if (!open) closeDrawer()
     }}>
       <SheetContent className="sm:max-w-lg overflow-y-auto border-l border-white/10 bg-black/95 backdrop-blur-2xl p-0">

@@ -1,11 +1,38 @@
 "use client"
 
-import { useMemo, useEffect } from "react"
-import { MapContainer, TileLayer, Polygon, Popup, useMap, ZoomControl, ScaleControl } from "react-leaflet"
+import { useMemo, useEffect, useState, useCallback } from "react"
+import {
+  MapContainer,
+  TileLayer,
+  Polygon,
+  Polyline,
+  Popup,
+  CircleMarker,
+  useMap,
+  useMapEvents,
+  ZoomControl,
+  ScaleControl,
+} from "react-leaflet"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
-import { resolveRiskMeta } from "@/lib/utils/safe-resolvers"
+import { resolveRiskMeta, resolveSeverityMeta, resolveMonitoringTypeMeta } from "@/lib/utils/safe-resolvers"
 import type { Parcel } from "@/lib/api/parcels"
+import type { MonitoringEvent } from "@/lib/api/types"
+import { formatDateTime } from "@/lib/api/parcel-display"
+
+export interface ParcelMapLayers {
+  satellite: boolean
+  labels: boolean
+  parcels: boolean
+  events: boolean
+}
+
+export const DEFAULT_LAYERS: ParcelMapLayers = {
+  satellite: true,
+  labels: true,
+  parcels: true,
+  events: true,
+}
 
 interface ParcelMapProps {
   parcels: Parcel[]
@@ -16,10 +43,27 @@ interface ParcelMapProps {
     longitude: number
     zoom: number
   }
+  /** Which layers are visible. Defaults to everything on. */
+  layers?: ParcelMapLayers
+  /** Real monitoring events rendered as markers when the events layer is on. */
+  events?: MonitoringEvent[]
+  /** When true, two clicks on the map measure a distance instead of selecting. */
+  measureActive?: boolean
+  /** Reports the measured distance in meters (null when cleared). */
+  onMeasure?: (distanceMeters: number | null) => void
+  /** Gives the parent access to the Leaflet map (locate, fit bounds…). */
+  onMapReady?: (map: L.Map) => void
 }
 
 const RISK_COLORS: Record<string, string> = {
   LOW: "#22c55e",
+  MEDIUM: "#eab308",
+  HIGH: "#f97316",
+  CRITICAL: "#ef4444",
+}
+
+const SEVERITY_COLORS: Record<string, string> = {
+  LOW: "#60a5fa",
   MEDIUM: "#eab308",
   HIGH: "#f97316",
   CRITICAL: "#ef4444",
@@ -33,12 +77,19 @@ function getSafeFill(risk: string): string {
 const DEFAULT_CENTER: [number, number] = [12.6392, -7.9892] // Bamako area
 const DEFAULT_ZOOM = 13
 
-/**
- * Controller to handle map reference and view updates
- */
-function MapController({ selectedParcel }: { selectedParcel: Parcel | null }) {
+function MapController({
+  selectedParcel,
+  onMapReady,
+}: {
+  selectedParcel: Parcel | null
+  onMapReady?: (map: L.Map) => void
+}) {
   const map = useMap()
-  
+
+  useEffect(() => {
+    onMapReady?.(map)
+  }, [map, onMapReady])
+
   useEffect(() => {
     if (selectedParcel?.centroid) {
       const lat = selectedParcel.centroid.latitude
@@ -54,21 +105,74 @@ function MapController({ selectedParcel }: { selectedParcel: Parcel | null }) {
   return null
 }
 
+/** Two-click distance measurement; a third click starts a new measurement. */
+function MeasureControl({
+  active,
+  onMeasure,
+  points,
+  setPoints,
+}: {
+  active: boolean
+  onMeasure?: (distanceMeters: number | null) => void
+  points: [number, number][]
+  setPoints: (points: [number, number][]) => void
+}) {
+  useMapEvents({
+    click(e) {
+      if (!active) return
+      const next: [number, number][] =
+        points.length >= 2 ? [[e.latlng.lat, e.latlng.lng]] : [...points, [e.latlng.lat, e.latlng.lng]]
+      setPoints(next)
+      if (next.length === 2) {
+        const distance = L.latLng(next[0]).distanceTo(L.latLng(next[1]))
+        onMeasure?.(distance)
+      } else {
+        onMeasure?.(null)
+      }
+    },
+  })
+  return null
+}
+
 export function ParcelMap({
   parcels,
   selectedId,
   onSelect,
   initialView,
+  layers = DEFAULT_LAYERS,
+  events = [],
+  measureActive = false,
+  onMeasure,
+  onMapReady,
 }: ParcelMapProps) {
-  
-  const selectedParcel = useMemo(() => 
+
+  const [measurePoints, setMeasurePoints] = useState<[number, number][]>([])
+
+  // Leaving measure mode clears the segment.
+  useEffect(() => {
+    if (!measureActive) {
+      setMeasurePoints([])
+      onMeasure?.(null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [measureActive])
+
+  const selectedParcel = useMemo(() =>
     parcels.find(p => p.id === selectedId) || null
   , [parcels, selectedId])
 
-  const center: [number, number] = initialView 
-    ? [initialView.latitude, initialView.longitude] 
+  const handleSelect = useCallback(
+    (parcelId: string) => {
+      // While measuring, clicks belong to the measurement, not the selection.
+      if (!measureActive) onSelect(parcelId)
+    },
+    [measureActive, onSelect],
+  )
+
+  const center: [number, number] = initialView
+    ? [initialView.latitude, initialView.longitude]
     : DEFAULT_CENTER
-  
+
   const zoom = initialView?.zoom || DEFAULT_ZOOM
 
   return (
@@ -80,23 +184,33 @@ export function ParcelMap({
         scrollWheelZoom={true}
         className="h-full w-full"
       >
-        <MapController selectedParcel={selectedParcel} />
-        
-        <TileLayer
-          attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+        <MapController selectedParcel={selectedParcel} onMapReady={onMapReady} />
+        <MeasureControl
+          active={measureActive}
+          onMeasure={onMeasure}
+          points={measurePoints}
+          setPoints={setMeasurePoints}
         />
-        
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png"
-          opacity={0.5}
-        />
+
+        {layers.satellite && (
+          <TileLayer
+            attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
+            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+          />
+        )}
+
+        {layers.labels && (
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            url="https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png"
+            opacity={0.5}
+          />
+        )}
 
         <ZoomControl position="topright" />
         <ScaleControl position="bottomright" metric={true} imperial={false} />
 
-        {parcels.map((parcel) => {
+        {layers.parcels && parcels.map((parcel) => {
           if (!parcel.geometry || !parcel.geometry.coordinates || parcel.geometry.coordinates.length === 0) {
             return null
           }
@@ -117,7 +231,7 @@ export function ParcelMap({
                 weight: isSelected ? 3 : 1,
               }}
               eventHandlers={{
-                click: () => onSelect(parcel.id),
+                click: () => handleSelect(parcel.id),
               }}
             >
               <Popup>
@@ -126,6 +240,42 @@ export function ParcelMap({
             </Polygon>
           )
         })}
+
+        {layers.events && events.map((event) => {
+          if (typeof event.latitude !== "number" || typeof event.longitude !== "number") return null
+          const color = SEVERITY_COLORS[event.severity] ?? "#71717a"
+          return (
+            <CircleMarker
+              key={event.id}
+              center={[event.latitude, event.longitude]}
+              radius={7}
+              pathOptions={{ color, fillColor: color, fillOpacity: 0.6, weight: 2 }}
+            >
+              <Popup>
+                <EventPopupCard event={event} />
+              </Popup>
+            </CircleMarker>
+          )
+        })}
+
+        {measurePoints.length > 0 && (
+          <>
+            {measurePoints.map((point, index) => (
+              <CircleMarker
+                key={`measure-${index}`}
+                center={point}
+                radius={5}
+                pathOptions={{ color: "#ffffff", fillColor: "#10b981", fillOpacity: 1, weight: 2 }}
+              />
+            ))}
+            {measurePoints.length === 2 && (
+              <Polyline
+                positions={measurePoints}
+                pathOptions={{ color: "#10b981", weight: 3, dashArray: "6, 6" }}
+              />
+            )}
+          </>
+        )}
       </MapContainer>
 
       <style jsx global>{`
@@ -150,7 +300,7 @@ export function ParcelMap({
 
 function ParcelPopupCard({ parcel }: { parcel: Parcel }) {
   const riskMeta = resolveRiskMeta(parcel.riskLevel)
-  
+
   return (
     <div className="min-w-[220px] p-4 text-xs font-mono">
       <div className="text-[9px] uppercase tracking-widest text-slate-400 mb-1">
@@ -168,6 +318,23 @@ function ParcelPopupCard({ parcel }: { parcel: Parcel }) {
         <span className="font-black text-emerald-400">
           {parcel.areaHectares} HA
         </span>
+      </div>
+    </div>
+  )
+}
+
+function EventPopupCard({ event }: { event: MonitoringEvent }) {
+  const severity = resolveSeverityMeta(event.severity)
+  const type = resolveMonitoringTypeMeta(event.type)
+  return (
+    <div className="min-w-[220px] p-4 text-xs">
+      <div className="text-[9px] uppercase tracking-widest text-slate-400 mb-1">
+        {severity.label} · {type.label}
+      </div>
+      <div className="text-sm text-white mb-2">{event.description}</div>
+      <div className="text-[10px] text-slate-400 font-mono">
+        {formatDateTime(event.detectedAt)}
+        {event.resolved ? " · Résolu" : ""}
       </div>
     </div>
   )

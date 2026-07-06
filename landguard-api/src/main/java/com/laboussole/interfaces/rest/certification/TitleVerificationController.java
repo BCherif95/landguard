@@ -1,24 +1,28 @@
 package com.laboussole.interfaces.rest.certification;
 
 import com.laboussole.application.service.TitleVerificationWorkflowService;
-import com.laboussole.domain.model.UserId;
 import com.laboussole.domain.model.certification.CertificationId;
 import com.laboussole.domain.model.parcel.ParcelId;
 import com.laboussole.domain.port.out.TitleVerificationRepository;
+import com.laboussole.infrastructure.security.AuthenticatedPrincipal;
 import com.laboussole.interfaces.rest.certification.dto.LandTitleDto;
 import com.laboussole.interfaces.rest.certification.dto.TitleVerificationResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/title-verifications")
-@Tag(name = "Title Verification", description = "Realistic Malian Land Title Verification Workflow")
+@SecurityRequirement(name = "bearerAuth")
+@Tag(name = "Title Verification", description = "Malian Land Title verification workflow (case lifecycle).")
 @RequiredArgsConstructor
 public class TitleVerificationController {
 
@@ -31,12 +35,12 @@ public class TitleVerificationController {
     @Operation(summary = "Open a new title verification case for a Malian Land Title")
     public ResponseEntity<TitleVerificationResponse> openCase(
             @RequestBody OpenCaseRequest request,
-            @AuthenticationPrincipal String userId) {
+            @AuthenticationPrincipal AuthenticatedPrincipal principal) {
         var caseObj = workflowService.openCase(
                 new ParcelId(request.parcelId()),
                 request.caseReference(),
                 request.reportedTitle().toDomain(),
-                new UserId(UUID.fromString(userId))
+                principal.userId()
         );
         return ResponseEntity.ok(TitleVerificationResponse.fromDomain(caseObj));
     }
@@ -49,14 +53,16 @@ public class TitleVerificationController {
     }
 
     @PostMapping("/{id}/start-domain-control")
-    @Operation(summary = "Mark case as under control at the Domain office")
+    @Operation(summary = "Mark case as under control at the Domain office (officers, legal, admins only)")
+    @PreAuthorize("hasAnyRole('OFFICER', 'LEGAL', 'ADMIN')")
     public ResponseEntity<Void> startDomainControl(@PathVariable UUID id) {
         workflowService.startDomainControl(new CertificationId(id));
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{id}/requisition")
-    @Operation(summary = "Record the result of the manual Domain requisition")
+    @Operation(summary = "Record the result of the manual Domain requisition (officers, legal, admins only)")
+    @PreAuthorize("hasAnyRole('OFFICER', 'LEGAL', 'ADMIN')")
     public ResponseEntity<Void> recordRequisition(
             @PathVariable UUID id,
             @RequestBody TitleVerificationResponse.RequisitionDto requisitionDto) {
@@ -65,12 +71,22 @@ public class TitleVerificationController {
     }
 
     @PostMapping("/{id}/certify")
-    @Operation(summary = "Final certification by a Notary or authorized Agent")
+    @Operation(summary = "Final certification by a Notary or authorized Agent (officers, legal, admins only)")
+    @PreAuthorize("hasAnyRole('OFFICER', 'LEGAL', 'ADMIN')")
     public ResponseEntity<Void> certify(
             @PathVariable UUID id,
-            @AuthenticationPrincipal String authorityId) {
-        workflowService.certify(new CertificationId(id), new UserId(UUID.fromString(authorityId)));
+            @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        workflowService.certify(new CertificationId(id), principal.userId());
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping
+    @Operation(summary = "List verification cases for a parcel (at most one per parcel). Empty list when none is open.")
+    public List<TitleVerificationResponse> listByParcel(@RequestParam("parcelId") UUID parcelId) {
+        return repository.findByParcelId(new ParcelId(parcelId))
+                .map(TitleVerificationResponse::fromDomain)
+                .map(List::of)
+                .orElseGet(List::of);
     }
 
     @GetMapping("/{id}")

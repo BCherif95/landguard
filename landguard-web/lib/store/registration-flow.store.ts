@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { PolygonGeometry } from '../api/parcels';
+import { OcrExtraction, PolygonGeometry } from '../api/parcels';
 import { generateCadastralReference } from '../domain/cadastral-reference';
 
 interface RegistrationStep {
@@ -22,6 +22,8 @@ export interface LandDocument {
   fileName?: string;
   storageKey?: string;
   file?: File;
+  /** Server-side OCR reading — advisory pre-fill and anomaly flags only. */
+  ocr?: OcrExtraction;
 }
 
 interface RegistrationFlowState {

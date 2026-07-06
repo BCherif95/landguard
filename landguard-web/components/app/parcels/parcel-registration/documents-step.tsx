@@ -2,10 +2,31 @@
 
 import { Button } from "@/components/ui/button"
 import { useRegistrationFlowStore, LandDocument } from "@/lib/store/registration-flow.store"
-import { FileText, Upload, CheckCircle2, AlertCircle, X, Loader2 } from "lucide-react"
+import { FileText, Upload, CheckCircle2, AlertCircle, X, Loader2, ScanSearch } from "lucide-react"
 import { useState, useRef } from "react"
 import { cn } from "@/lib/utils"
-import { parcelsApi } from "@/lib/api/parcels"
+import { parcelsApi, OcrExtraction } from "@/lib/api/parcels"
+import { toast } from "sonner"
+
+const DEFAULT_AREA_HECTARES = 1.0
+
+// OCR is advisory only: it pre-fills fields the user has not touched yet and
+// surfaces anomalies. It never validates a document — that stays human.
+function applyOcrPrefill(ocr: OcrExtraction) {
+  const { formData, updateFormData } = useRegistrationFlowStore.getState()
+  const updates: Partial<typeof formData> = {}
+
+  if (ocr.ownerName && formData.ownerLabel.trim() === "") {
+    updates.ownerLabel = ocr.ownerName
+  }
+  const surface = ocr.surfaceAreaHectares === null ? NaN : Number(ocr.surfaceAreaHectares)
+  if (Number.isFinite(surface) && surface > 0 && formData.areaHectares === DEFAULT_AREA_HECTARES) {
+    updates.areaHectares = surface
+  }
+  if (Object.keys(updates).length > 0) {
+    updateFormData(updates)
+  }
+}
 
 export function DocumentsStep() {
   const { formData, updateDocument, nextStep, prevStep } = useRegistrationFlowStore()
@@ -20,14 +41,25 @@ export function DocumentsStep() {
 
     setUploadingType(type)
     try {
-      const response = await parcelsApi.uploadDocument(file)
-      updateDocument(type, { 
-        status: 'UPLOADED', 
+      const response = await parcelsApi.uploadDocument(file, type)
+      updateDocument(type, {
+        status: 'UPLOADED',
         fileName: file.name,
         storageKey: response.storageKey
       })
-    } catch (error) {
-      console.error("Upload failed", error)
+      try {
+        const ocr = await parcelsApi.getDocumentOcrExtraction(response.id)
+        updateDocument(type, { ocr })
+        if (ocr.status === 'PENDING_VERIFICATION') {
+          applyOcrPrefill(ocr)
+        }
+      } catch (ocrError) {
+        // The upload itself succeeded; a missing OCR reading only means the
+        // instructor will review the document unaided.
+        console.error("OCR extraction unavailable", ocrError)
+      }
+    } catch {
+      toast.error("Le téléversement a échoué. Vérifiez votre connexion et réessayez.")
     } finally {
       setUploadingType(null)
       activeTypeRef.current = null
@@ -41,7 +73,7 @@ export function DocumentsStep() {
   }
 
   const removeDocument = (type: LandDocument['type']) => {
-    updateDocument(type, { status: 'PENDING', fileName: undefined, storageKey: undefined })
+    updateDocument(type, { status: 'PENDING', fileName: undefined, storageKey: undefined, ocr: undefined })
   }
 
   const allUploaded = formData.documents.every(doc => doc.status === 'UPLOADED')
@@ -51,7 +83,8 @@ export function DocumentsStep() {
       <div className="space-y-4">
         <h3 className="text-lg font-medium">Documents obligatoires (Mali)</h3>
         <p className="text-sm text-muted-foreground">
-          Téléchargez les scans originaux pour permettre la vérification OCR par l'IA de la conservation foncière.
+          Téléversez les scans originaux. Une lecture automatique pré-remplit certains champs ;
+          la vérification finale reste effectuée par un agent habilité.
         </p>
 
         <div className="grid gap-3">
@@ -76,6 +109,22 @@ export function DocumentsStep() {
                     <p className="text-[10px] text-emerald font-mono">{doc.fileName}</p>
                   ) : (
                     <p className="text-[10px] text-muted-foreground">Format PDF, JPG (max 5Mo)</p>
+                  )}
+                  {doc.ocr?.status === 'PENDING_VERIFICATION' && doc.ocr.titleNumber && (
+                    <p className="text-[10px] text-muted-foreground font-mono flex items-center gap-1 mt-1">
+                      <ScanSearch className="h-3 w-3 text-emerald" />
+                      N° de titre détecté : {doc.ocr.titleNumber}
+                    </p>
+                  )}
+                  {doc.ocr?.status === 'PENDING_VERIFICATION' && doc.ocr.structuralAnomalies.length > 0 && (
+                    <p className="text-[10px] text-orange-500 leading-relaxed mt-1 max-w-md">
+                      Notre système a détecté une incohérence dans ce document (ex: police d'écriture non uniforme). Un expert vérifiera ce point avant certification.
+                    </p>
+                  )}
+                  {doc.ocr?.status === 'FAILED' && (
+                    <p className="text-[10px] text-muted-foreground leading-relaxed mt-1 max-w-md">
+                      Lecture automatique indisponible pour ce document — il sera vérifié manuellement par un expert.
+                    </p>
                   )}
                 </div>
               </div>

@@ -1,130 +1,271 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import Link from "next/link"
 import { motion } from "framer-motion"
 import {
   Layers,
   Maximize2,
-  Compass,
   Ruler,
-  Pencil,
-  Search,
+  LocateFixed,
   Filter,
-  Download,
   Sparkles,
-  ZoomIn,
-  ZoomOut,
   Loader2,
+  MapPinned,
+  History,
 } from "lucide-react"
-import { ParcelMap } from "@/components/map/parcel-map"
+import L from "leaflet"
+import { ParcelMap, DEFAULT_LAYERS, type ParcelMapLayers } from "@/components/map/parcel-map"
 import { useParcels } from "@/lib/hooks/use-parcels"
+import { useMonitoringEvents } from "@/lib/hooks/use-monitoring-events"
+import { useSatelliteSnapshots } from "@/lib/hooks/use-satellite-snapshots"
 import type { Parcel, ParcelStatus, RiskLevel } from "@/lib/api/parcels"
 import { cn } from "@/lib/utils"
+import { Slider } from "@/components/ui/slider"
+import { Button } from "@/components/ui/button"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { formatXof, formatDateTime } from "@/lib/api/parcel-display"
 
 import { resolveStatusMeta, resolveRiskMeta } from "@/lib/utils/safe-resolvers"
 import { AppErrorBoundary } from "@/components/app/error-boundary"
 import { useParcelUIStore } from "@/lib/store/parcel-ui.store"
 import { ParcelDetailSheet } from "@/components/app/parcel-detail-sheet"
+import { toast } from "sonner"
 
-const tools = [
-  { icon: Compass, label: "Boussole" },
-  { icon: Ruler, label: "Mesurer" },
-  { icon: Pencil, label: "Dessiner" },
-  { icon: Search, label: "Localiser" },
+const RISK_RANK: Record<RiskLevel, number> = { LOW: 1, MEDIUM: 2, HIGH: 3, CRITICAL: 4 }
+
+const RISK_FILTER_LABEL: Record<"ALL" | RiskLevel, string> = {
+  ALL: "Tous niveaux de risque",
+  LOW: "Risque ≥ Faible",
+  MEDIUM: "Risque ≥ Modéré",
+  HIGH: "Risque ≥ Élevé",
+  CRITICAL: "Risque critique uniquement",
+}
+
+const STATUS_FILTER_OPTIONS: { value: "ALL" | ParcelStatus; label: string }[] = [
+  { value: "ALL", label: "Tous les statuts" },
+  { value: "SUBMITTED", label: "Soumises" },
+  { value: "UNDER_VERIFICATION", label: "En vérification" },
+  { value: "CERTIFIED", label: "Certifiées" },
+  { value: "TITLE_ISSUED", label: "Titre émis" },
+  { value: "DISPUTED", label: "En litige" },
 ]
 
-const layerControls = [
-  { id: "satellite", label: "Imagerie Sentinel-2", on: true },
-  { id: "parcels", label: "Parcelles certifiées", on: true },
-  { id: "anomalies", label: "Anomalies IA", on: true },
-  { id: "heatmap", label: "Heatmap de risque", on: false },
-  { id: "cadastre", label: "Cadastre officiel 2024", on: true },
-  { id: "hydro", label: "Réseau hydrographique", on: true },
+const LAYER_LABELS: { id: keyof ParcelMapLayers; label: string }[] = [
+  { id: "satellite", label: "Imagerie satellite" },
+  { id: "labels", label: "Noms des lieux" },
+  { id: "parcels", label: "Parcelles" },
+  { id: "events", label: "Événements de surveillance" },
 ]
 
-function formatXof(amount: number) {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "XOF",
-    maximumFractionDigits: 0,
-  }).format(amount)
+function formatDistance(meters: number): string {
+  if (meters >= 1000) return `${(meters / 1000).toFixed(2)} km`
+  return `${Math.round(meters)} m`
 }
 
 export default function CartePage() {
   const { data: parcels, isLoading, isError } = useParcels({ limit: 200 })
+  const { events } = useMonitoringEvents()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const openDetails = useParcelUIStore((s) => s.openDetails)
 
-  const selected: Parcel | null = useMemo(() => {
-    if (!parcels || !selectedId) return null
-    return parcels.find((p) => p.id === selectedId) ?? null
-  }, [parcels, selectedId])
+  const mapRef = useRef<L.Map | null>(null)
 
-  // ... (effects stay same)
-  useEffect(() => {
-    if (!selectedId && parcels && parcels.length > 0) {
-      setSelectedId(parcels[0].id)
+  const [layers, setLayers] = useState<ParcelMapLayers>(DEFAULT_LAYERS)
+  const [measureActive, setMeasureActive] = useState(false)
+  const [measuredDistance, setMeasuredDistance] = useState<number | null>(null)
+  const [riskFilter, setRiskFilter] = useState<"ALL" | RiskLevel>("ALL")
+  const [statusFilter, setStatusFilter] = useState<"ALL" | ParcelStatus>("ALL")
+
+  const filteredParcels = useMemo(() => {
+    let list = parcels ?? []
+    if (riskFilter !== "ALL") {
+      list = list.filter((p) => RISK_RANK[p.riskLevel] >= RISK_RANK[riskFilter])
     }
-  }, [parcels, selectedId])
+    if (statusFilter !== "ALL") {
+      list = list.filter((p) => p.status === statusFilter)
+    }
+    return list
+  }, [parcels, riskFilter, statusFilter])
+
+  const selected: Parcel | null = useMemo(() => {
+    if (!filteredParcels.length || !selectedId) return null
+    return filteredParcels.find((p) => p.id === selectedId) ?? null
+  }, [filteredParcels, selectedId])
+
+  useEffect(() => {
+    if ((!selectedId || !filteredParcels.some((p) => p.id === selectedId)) && filteredParcels.length > 0) {
+      setSelectedId(filteredParcels[0].id)
+    }
+  }, [filteredParcels, selectedId])
+
+  const filterSummary = [
+    RISK_FILTER_LABEL[riskFilter],
+    STATUS_FILTER_OPTIONS.find((o) => o.value === statusFilter)?.label ?? "",
+  ]
+    .filter(Boolean)
+    .join(" · ")
+
+  const handleLocate = () => {
+    if (!navigator.geolocation) {
+      toast.error("La géolocalisation n'est pas prise en charge par votre navigateur.")
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        mapRef.current?.flyTo([position.coords.latitude, position.coords.longitude], 15, {
+          duration: 1.2,
+        })
+      },
+      () => toast.error("Position introuvable. Autorisez la géolocalisation puis réessayez."),
+    )
+  }
+
+  const handleFitParcels = () => {
+    const map = mapRef.current
+    if (!map || filteredParcels.length === 0) return
+    const points = filteredParcels
+      .filter((p) => p.centroid)
+      .map((p) => [p.centroid.latitude, p.centroid.longitude] as [number, number])
+    if (points.length === 0) return
+    map.fitBounds(L.latLngBounds(points), { padding: [60, 60] })
+  }
 
   return (
     <AppErrorBoundary name="Carte Interactive">
       <div className="relative -m-4 h-[calc(100vh-4rem)] overflow-hidden bg-[#070d18] sm:-m-6">
         <div className="absolute inset-0">
           <ParcelMap
-            parcels={parcels ?? []}
+            parcels={filteredParcels}
             selectedId={selectedId}
             onSelect={setSelectedId}
+            layers={layers}
+            events={events}
+            measureActive={measureActive}
+            onMeasure={setMeasuredDistance}
+            onMapReady={(map) => {
+              mapRef.current = map
+            }}
           />
         </div>
 
         <ParcelDetailSheet />
 
         {/* Top toolbar */}
-        {/* ... (toolbar remains same) */}
         <motion.div
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           className="absolute left-4 right-4 top-4 z-20 flex flex-wrap items-center gap-2"
         >
           <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-black/60 p-1 backdrop-blur-xl">
-            {tools.map((tool) => (
-              <button
-                key={tool.label}
-                type="button"
-                title={tool.label}
-                className="flex h-9 w-9 items-center justify-center rounded text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-              >
-                <tool.icon className="h-4 w-4" />
-              </button>
-            ))}
+            <button
+              type="button"
+              title="Mesurer une distance (deux clics sur la carte)"
+              aria-pressed={measureActive}
+              onClick={() => setMeasureActive((v) => !v)}
+              className={cn(
+                "flex h-9 items-center gap-1.5 rounded px-2.5 text-xs transition-colors",
+                measureActive
+                  ? "bg-emerald text-black"
+                  : "text-white/70 hover:bg-white/10 hover:text-white",
+              )}
+            >
+              <Ruler className="h-4 w-4" />
+              Mesurer
+            </button>
+            <button
+              type="button"
+              title="Recentrer la carte sur votre position"
+              onClick={handleLocate}
+              className="flex h-9 items-center gap-1.5 rounded px-2.5 text-xs text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <LocateFixed className="h-4 w-4" />
+              Localiser
+            </button>
           </div>
 
-          <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-xs text-white/70 backdrop-blur-xl">
-            <Filter className="h-3.5 w-3.5" />
-            <span>Filtres : Toutes parcelles · Risque ≥ Faible</span>
-          </div>
+          {measureActive && (
+            <div className="rounded-lg border border-emerald/40 bg-black/70 px-3 py-2 text-xs text-emerald backdrop-blur-xl">
+              {measuredDistance !== null
+                ? `Distance : ${formatDistance(measuredDistance)}`
+                : "Cliquez deux points sur la carte pour mesurer."}
+            </div>
+          )}
+
+          {/* Real filters */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-xs text-white/70 backdrop-blur-xl transition-colors hover:bg-black/80 hover:text-white"
+              >
+                <Filter className="h-3.5 w-3.5" />
+                <span>Filtres : {filterSummary}</span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-72 space-y-3">
+              <div className="space-y-1.5">
+                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                  Niveau de risque minimal
+                </p>
+                <Select value={riskFilter} onValueChange={(v) => setRiskFilter(v as "ALL" | RiskLevel)}>
+                  <SelectTrigger aria-label="Filtrer par niveau de risque">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(RISK_FILTER_LABEL) as Array<"ALL" | RiskLevel>).map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {RISK_FILTER_LABEL[value]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                  Statut des parcelles
+                </p>
+                <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as "ALL" | ParcelStatus)}>
+                  <SelectTrigger aria-label="Filtrer par statut">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_FILTER_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </PopoverContent>
+          </Popover>
 
           <div className="ml-auto flex items-center gap-2">
             <button
               type="button"
-              className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-xs text-white/70 backdrop-blur-xl transition-colors hover:bg-black/80 hover:text-white"
-            >
-              <Download className="h-3.5 w-3.5" />
-              Exporter
-            </button>
-            <button
-              type="button"
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-black/60 text-white/70 backdrop-blur-xl transition-colors hover:bg-black/80 hover:text-white"
-              title="Recalibrer la vue"
+              onClick={handleFitParcels}
+              className="flex h-9 items-center gap-1.5 rounded-lg border border-white/10 bg-black/60 px-3 text-xs text-white/70 backdrop-blur-xl transition-colors hover:bg-black/80 hover:text-white"
+              title="Recadrer la vue sur les parcelles affichées"
             >
               <Maximize2 className="h-4 w-4" />
+              Recadrer
             </button>
           </div>
         </motion.div>
 
-        {/* Layers panel */}
-        {/* ... (layers remain same) */}
+        {/* Layers panel — controlled, actually shows/hides map layers */}
         <motion.div
           initial={{ x: -20, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
@@ -135,18 +276,21 @@ export default function CartePage() {
             Couches
           </div>
           <ul className="space-y-1">
-            {layerControls.map((l) => (
+            {LAYER_LABELS.map((layer) => (
               <li
-                key={l.id}
+                key={layer.id}
                 className="flex items-center justify-between rounded px-2 py-1.5 text-xs text-white/80 hover:bg-white/5"
               >
-                <label className="flex items-center gap-2">
+                <label className="flex w-full cursor-pointer items-center gap-2">
                   <input
                     type="checkbox"
-                    defaultChecked={l.on}
+                    checked={layers[layer.id]}
+                    onChange={(e) =>
+                      setLayers((current) => ({ ...current, [layer.id]: e.target.checked }))
+                    }
                     className="h-3 w-3 rounded border-white/20 bg-transparent accent-emerald"
                   />
-                  {l.label}
+                  {layer.label}
                 </label>
               </li>
             ))}
@@ -166,7 +310,14 @@ export default function CartePage() {
             </div>
           )}
           {isError && (
-            <div className="text-xs text-danger">Erreur de chargement des parcelles.</div>
+            <div className="text-xs text-danger">
+              Erreur de chargement des parcelles. Vérifiez votre connexion puis rechargez la page.
+            </div>
+          )}
+          {!isLoading && !isError && filteredParcels.length === 0 && (parcels?.length ?? 0) > 0 && (
+            <p className="text-xs text-white/60">
+              Aucune parcelle ne correspond aux filtres sélectionnés.
+            </p>
           )}
           {selected && (
             <div className="space-y-3 text-white">
@@ -204,15 +355,15 @@ export default function CartePage() {
                 </span>
               </div>
 
+              {/* Faithful synthesis: states only what the API actually returns. */}
               <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-xs">
                 <div className="mb-1 flex items-center gap-1.5 text-emerald">
                   <Sparkles className="h-3 w-3" />
-                  <span className="font-medium">Synthèse IA</span>
+                  <span className="font-medium">Synthèse</span>
                 </div>
                 <p className="text-white/70">
-                  Parcelle {resolveStatusMeta(selected.status).label.toLowerCase()} avec un score de
-                  confiance de {selected.trustScore}/100. Surface vérifiée par recoupement
-                  cadastral et vue Sentinel-2.
+                  Statut : {resolveStatusMeta(selected.status).label}. Score de confiance :{" "}
+                  {selected.trustScore}/100. Score de risque : {selected.riskScore}/100.
                 </p>
               </div>
 
@@ -232,14 +383,120 @@ export default function CartePage() {
           )}
         </motion.aside>
 
-        {/* Bottom-left count */}
-        <div className="absolute bottom-4 left-4 z-20 flex items-center gap-2">
-          <div className="rounded-lg border border-white/10 bg-black/70 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.22em] text-white/70 backdrop-blur-xl">
-            {parcels?.length ?? 0} parcelle{(parcels?.length ?? 0) > 1 ? "s" : ""}
+        {/* Empty state — no parcels at all */}
+        {!isLoading && !isError && (parcels?.length ?? 0) === 0 && (
+          <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div className="mx-4 max-w-md rounded-2xl border border-white/10 bg-black/80 p-8 text-center">
+              <MapPinned className="mx-auto h-10 w-10 text-emerald" />
+              <h2 className="mt-4 font-display text-xl text-white">
+                Aucune parcelle enregistrée pour le moment
+              </h2>
+              <p className="mt-2 text-sm text-white/60">
+                Ajoutez votre première parcelle pour commencer la surveillance satellite.
+              </p>
+              <Button asChild className="mt-6 bg-emerald text-black hover:bg-emerald/90">
+                <Link href="/registre">Enregistrer une parcelle</Link>
+              </Button>
+            </div>
           </div>
+        )}
+
+        {/* Bottom bar: count + snapshot timeline */}
+        <div className="absolute bottom-4 left-4 right-4 z-20 flex flex-wrap items-end gap-3">
+          <div className="rounded-lg border border-white/10 bg-black/70 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.22em] text-white/70 backdrop-blur-xl">
+            {filteredParcels.length} parcelle{filteredParcels.length > 1 ? "s" : ""}
+          </div>
+          {selected && <SnapshotTimeline parcelId={selected.id} />}
         </div>
       </div>
     </AppErrorBoundary>
+  )
+}
+
+/**
+ * Time slider over the real satellite snapshots stored for the parcel.
+ * When history is sparse, it says so honestly instead of faking continuity.
+ */
+function SnapshotTimeline({ parcelId }: { parcelId: string }) {
+  const { data: snapshots, isLoading } = useSatelliteSnapshots(parcelId)
+  const [index, setIndex] = useState(0)
+
+  useEffect(() => {
+    setIndex(snapshots && snapshots.length > 0 ? snapshots.length - 1 : 0)
+  }, [parcelId, snapshots?.length])
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/70 px-3 py-2 text-[10px] text-white/60 backdrop-blur-xl">
+        <Loader2 className="h-3 w-3 animate-spin" />
+        Chargement de l&apos;historique satellite…
+      </div>
+    )
+  }
+
+  if (!snapshots || snapshots.length === 0) {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/70 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.18em] text-white/50 backdrop-blur-xl">
+        <History className="h-3 w-3" />
+        Aucun cliché historique pour cette parcelle
+      </div>
+    )
+  }
+
+  const current = snapshots[Math.min(index, snapshots.length - 1)]
+
+  return (
+    <div className="min-w-[280px] flex-1 rounded-xl border border-white/10 bg-black/70 p-3 backdrop-blur-xl sm:max-w-xl">
+      <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.18em] text-white/60">
+        <span className="flex items-center gap-1.5">
+          <History className="h-3 w-3" />
+          Historique satellite
+        </span>
+        <span className="text-emerald">{formatDateTime(current.capturedAt)}</span>
+      </div>
+
+      {snapshots.length === 1 ? (
+        <p className="mt-2 text-[10px] text-white/50">
+          Historique limité — 1 seul cliché disponible.
+        </p>
+      ) : (
+        <>
+          <Slider
+            className="mt-3"
+            min={0}
+            max={snapshots.length - 1}
+            step={1}
+            value={[Math.min(index, snapshots.length - 1)]}
+            onValueChange={([value]) => setIndex(value)}
+            aria-label="Sélectionner un cliché historique"
+          />
+          <div className="mt-2 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.18em] text-white/40">
+            <span>{formatDateTime(snapshots[0].capturedAt)}</span>
+            <span>{formatDateTime(snapshots[snapshots.length - 1].capturedAt)}</span>
+          </div>
+          {snapshots.length < 5 && (
+            <p className="mt-1 text-[10px] text-white/50">
+              Historique limité — {snapshots.length} clichés disponibles.
+            </p>
+          )}
+        </>
+      )}
+
+      <div className="mt-2 flex items-center gap-3 text-[10px] text-white/70">
+        <span>Score de mouvement : {current.movementScore}</span>
+        <span>Score d&apos;anomalie : {current.anomalyScore}</span>
+        {current.imageUrl && (
+          <a
+            href={current.imageUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="ml-auto text-emerald underline-offset-2 hover:underline"
+          >
+            Voir le cliché
+          </a>
+        )}
+      </div>
+    </div>
   )
 }
 

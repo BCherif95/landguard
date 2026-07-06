@@ -1,294 +1,868 @@
 "use client"
 
-import { motion } from "framer-motion"
+import { useEffect, useMemo, useState } from "react"
 import {
-  ScanSearch,
   FileCheck2,
-  AlertTriangle,
-  Copy,
-  Sparkles,
+  FileSearch,
+  Loader2,
   ShieldCheck,
-  Eye,
-  FileWarning,
-  CheckCircle2,
-  XCircle,
-  UploadCloud,
-  Fingerprint,
+  AlertTriangle,
+  Check,
+  Landmark,
+  Send,
+  ScrollText,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { PremiumEmptyState, ErrorState } from "@/components/app/empty-states"
+import { AppErrorBoundary } from "@/components/app/error-boundary"
+import { useParcels } from "@/lib/hooks/use-parcels"
+import { useCurrentUser } from "@/lib/hooks/use-current-user"
+import {
+  useTitleVerificationCase,
+  useOpenVerificationCase,
+  useSubmitVerificationCase,
+  useStartDomainControl,
+  useRecordRequisition,
+  useCertifyVerificationCase,
+} from "@/lib/hooks/use-title-verification"
+import type {
+  TitleVerificationCase,
+  TitleRequisition,
+  VerificationStatus,
+} from "@/lib/api/title-verifications"
+import { formatDateTime } from "@/lib/api/parcel-display"
+import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 
-const checks = [
-  {
-    id: 1,
-    name: "OCR document — Titre foncier 2017-04421",
-    score: 98,
-    status: "ok" as const,
-    detail: "Texte extrait avec confiance 98.4%. Tampon notarial reconnu.",
-    icon: Eye,
-  },
-  {
-    id: 2,
-    name: "Détection de doublons cadastraux",
-    score: 100,
-    status: "ok" as const,
-    detail: "Aucun doublon détecté sur 18 423 titres analysés (rayon 50 km).",
-    icon: Copy,
-  },
-  {
-    id: 3,
-    name: "Cohérence GPS / Cadastre 2024",
-    score: 92,
-    status: "warn" as const,
-    detail: "Décalage de 1.4 m entre coordonnées déclarées et limite cadastrale Nord.",
-    icon: AlertTriangle,
-  },
-  {
-    id: 4,
-    name: "Authenticité du tampon — IA visuelle",
-    score: 96,
-    status: "ok" as const,
-    detail: "Empreinte du tampon Notaire Diallo confirmée (base 8 421 références).",
-    icon: Fingerprint,
-  },
-  {
-    id: 5,
-    name: "Contrôle de signature manuscrite",
-    score: 88,
-    status: "warn" as const,
-    detail: "Variation de pression détectée. Demande de signature de référence.",
-    icon: FileWarning,
-  },
-  {
-    id: 6,
-    name: "Vérification anti-falsification PDF",
-    score: 100,
-    status: "ok" as const,
-    detail: "Aucune trace d'édition. Hash SHA-256 cohérent avec dépôt initial.",
-    icon: ShieldCheck,
-  },
+// Nominal path of a verification case; branch states are surfaced as banners.
+const STEPS: { status: VerificationStatus; label: string }[] = [
+  { status: "DRAFT", label: "Dossier ouvert" },
+  { status: "PENDING_VERIFICATION", label: "Soumis pour vérification" },
+  { status: "DOMAIN_CONTROL", label: "Contrôle au bureau des Domaines" },
+  { status: "TF_VERIFIED", label: "Réquisition enregistrée" },
+  { status: "CERTIFIED", label: "Certifié" },
 ]
 
-const recentDocs = [
-  { name: "TF-2024-9921-Bamako.pdf", date: "Il y a 3 min", status: "Authentique", score: 99 },
-  { name: "Acte-vente-Korhogo-2023.pdf", date: "Il y a 12 min", status: "Authentique", score: 96 },
-  { name: "Titre-Sikasso-doublon.pdf", date: "Il y a 41 min", status: "Doublon", score: 42 },
-  { name: "Convention-Diema-2022.pdf", date: "Il y a 1 h", status: "Suspect", score: 61 },
-  { name: "Permis-occuper-Segou.pdf", date: "Il y a 2 h", status: "Authentique", score: 94 },
-]
+const STEP_RANK: Partial<Record<VerificationStatus, number>> = {
+  DRAFT: 1,
+  PENDING_VERIFICATION: 2,
+  PENDING_COMPLEMENT: 2,
+  DOMAIN_CONTROL: 3,
+  TF_VERIFIED: 4,
+  CERTIFIED: 5,
+}
+
+const RESTRICTED_ACTION_HINT = "Action réservée à un notaire ou agent habilité"
+
+function generateCaseReference(): string {
+  const year = new Date().getFullYear()
+  const suffix = Math.floor(100000 + Math.random() * 900000)
+  return `DOS-${year}-${suffix}`
+}
 
 export default function VerificationPage() {
-  const overall = Math.round(checks.reduce((a, c) => a + c.score, 0) / checks.length)
-  const verdict = overall >= 90 ? "Authentique" : overall >= 75 ? "À examiner" : "Suspect"
+  const user = useCurrentUser()
+  const isOfficial = user ? ["OFFICER", "LEGAL", "ADMIN"].includes(user.role) : false
+
+  const { data: parcels, isLoading: parcelsLoading, isError: parcelsError, refetch } = useParcels({ limit: 200 })
+  const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!selectedParcelId && parcels && parcels.length > 0) {
+      setSelectedParcelId(parcels[0].id)
+    }
+  }, [parcels, selectedParcelId])
+
+  const selectedParcel = useMemo(
+    () => parcels?.find((p) => p.id === selectedParcelId) ?? null,
+    [parcels, selectedParcelId],
+  )
+
+  const caseQuery = useTitleVerificationCase(selectedParcelId)
 
   return (
-    <div className="space-y-6 p-4 sm:p-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-emerald">
-            Module 03 · Vérification IA
-          </p>
-          <h1 className="mt-1 font-display text-2xl tracking-tight text-foreground sm:text-3xl">
-            Détection de fraude documentaire
-          </h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            OCR intelligent, contrôle anti-doublon, authentification de tampons et signatures —
-            entraîné sur plus de 230 000 actes africains.
-          </p>
-        </div>
-        <Button className="gap-2 bg-emerald text-primary-foreground hover:bg-emerald/90">
-          <UploadCloud className="h-4 w-4" />
-          Téléverser un document
-        </Button>
-      </div>
+    <AppErrorBoundary name="Vérification de titre">
+      <TooltipProvider delayDuration={200}>
+        <div className="space-y-6 p-4 sm:p-6">
+          {/* Header */}
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-emerald">
+                Module 03 · Vérification de titre
+              </p>
+              <h1 className="mt-1 font-display text-2xl tracking-tight text-foreground sm:text-3xl">
+                Vérification d&apos;un titre foncier
+              </h1>
+              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                Suivi du dossier officiel : ouverture, soumission, contrôle au bureau des
+                Domaines, réquisition et certification finale.
+              </p>
+            </div>
 
-      <div className="grid gap-4 lg:grid-cols-12">
-        {/* Document preview + verdict */}
-        <Card className="overflow-hidden border-border/60 bg-card/40 lg:col-span-5">
-          <div className="border-b border-border/60 px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-            Document analysé
-          </div>
-          <div className="relative aspect-[3/4] overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-            {/* Stylized scanned document */}
-            <div className="absolute inset-6 rounded-md bg-[#f6f0e2] p-6 shadow-2xl">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="font-display text-xs tracking-[0.3em] text-slate-700">
-                    RÉPUBLIQUE DU MALI
-                  </div>
-                  <div className="mt-0.5 font-display text-[9px] text-slate-600">
-                    Direction Nationale du Cadastre
-                  </div>
-                </div>
-                <div className="h-8 w-8 rounded-full border-2 border-slate-800/40" />
-              </div>
-              <div className="mt-4 font-display text-sm font-semibold text-slate-800">
-                TITRE FONCIER N° 2017-04421
-              </div>
-              <div className="mt-3 space-y-1.5">
-                {[80, 95, 70, 88, 92, 76, 84, 60].map((w, i) => (
-                  <div
-                    key={i}
-                    className="h-1 rounded bg-slate-300/80"
-                    style={{ width: `${w}%` }}
-                  />
-                ))}
-              </div>
-              <div className="mt-5 flex items-end justify-between">
-                <div className="space-y-1">
-                  <div className="h-1 w-24 rounded bg-slate-300/80" />
-                  <div className="h-1 w-16 rounded bg-slate-300/80" />
-                </div>
-                <div className="relative h-12 w-12 rounded-full border-2 border-rose-700/40">
-                  <div className="absolute inset-1 rounded-full border border-rose-700/40" />
-                  <div className="absolute inset-0 flex items-center justify-center font-display text-[7px] tracking-widest text-rose-700/60">
-                    NOTAIRE
-                  </div>
-                </div>
-              </div>
-            </div>
-            {/* Scan beam */}
-            <motion.div
-              aria-hidden
-              animate={{ y: ["-100%", "120%"] }}
-              transition={{ duration: 3.6, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-              className="absolute inset-x-0 h-32 bg-gradient-to-b from-transparent via-emerald/30 to-transparent"
-            />
-            {/* Detection rectangles */}
-            <div className="pointer-events-none absolute inset-0">
-              <div className="absolute left-[18%] top-[18%] h-8 w-32 rounded border border-emerald/70 bg-emerald/10" />
-              <div className="absolute right-[14%] bottom-[14%] h-12 w-12 rounded-full border-2 border-amber-400/80 bg-amber-400/10" />
-            </div>
-          </div>
-          <div className="border-t border-border/60 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                  Verdict global
-                </div>
-                <div className="mt-1 font-display text-2xl text-foreground">
-                  {verdict}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                  Score IA
-                </div>
-                <div className="mt-1 font-display text-2xl text-emerald">{overall}%</div>
-              </div>
-            </div>
-            <Progress value={overall} className="mt-3 h-1.5" />
-          </div>
-        </Card>
-
-        {/* Checks list */}
-        <Card className="border-border/60 bg-card/40 lg:col-span-7">
-          <div className="flex items-center justify-between border-b border-border/60 px-4 py-2.5">
-            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-              <ScanSearch className="h-3.5 w-3.5" />
-              Pipeline IA · 6 contrôles
-            </div>
-            <span className="flex items-center gap-1.5 rounded-md bg-emerald-soft px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.18em] text-emerald">
-              <Sparkles className="h-3 w-3" />
-              Modèle BOUSSOLE-Vision v3.2
-            </span>
-          </div>
-          <ul className="divide-y divide-border/60">
-            {checks.map((c, i) => (
-              <motion.li
-                key={c.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="flex items-start gap-3 px-4 py-3"
-              >
-                <div
-                  className={
-                    c.status === "ok"
-                      ? "flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-soft text-emerald"
-                      : "flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-amber-400/10 text-amber-400"
-                  }
+            {parcels && parcels.length > 0 && (
+              <div className="w-full sm:w-80">
+                <Label className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                  Parcelle concernée
+                </Label>
+                <Select
+                  value={selectedParcelId ?? undefined}
+                  onValueChange={(value) => setSelectedParcelId(value)}
                 >
-                  <c.icon className="h-4 w-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="truncate font-display text-sm text-foreground">{c.name}</div>
-                    <div className="flex items-center gap-1.5 font-mono text-xs">
-                      {c.status === "ok" ? (
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald" />
-                      ) : (
-                        <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
-                      )}
-                      <span
-                        className={c.status === "ok" ? "text-emerald" : "text-amber-400"}
-                      >
-                        {c.score}%
-                      </span>
-                    </div>
+                  <SelectTrigger aria-label="Sélectionner une parcelle">
+                    <SelectValue placeholder="Choisissez une parcelle" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {parcels.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name} — {p.reference}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+
+          {parcelsLoading && (
+            <div className="flex items-center justify-center p-16 text-muted-foreground">
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Chargement de vos parcelles…
+            </div>
+          )}
+
+          {parcelsError && (
+            <ErrorState
+              message="Impossible de charger vos parcelles. Vérifiez votre connexion puis réessayez."
+              retry={() => refetch()}
+            />
+          )}
+
+          {parcels && parcels.length === 0 && (
+            <PremiumEmptyState
+              icon={FileSearch}
+              title="Aucune parcelle enregistrée"
+              description="Enregistrez d'abord une parcelle au registre pour pouvoir ouvrir une vérification de titre foncier."
+            />
+          )}
+
+          {selectedParcel && (
+            <CaseSection
+              parcelId={selectedParcel.id}
+              parcelName={selectedParcel.name}
+              caseQuery={caseQuery}
+              isOfficial={isOfficial}
+            />
+          )}
+        </div>
+      </TooltipProvider>
+    </AppErrorBoundary>
+  )
+}
+
+function CaseSection({
+  parcelId,
+  parcelName,
+  caseQuery,
+  isOfficial,
+}: {
+  parcelId: string
+  parcelName: string
+  caseQuery: ReturnType<typeof useTitleVerificationCase>
+  isOfficial: boolean
+}) {
+  if (caseQuery.isLoading) {
+    return (
+      <div className="flex items-center justify-center p-16 text-muted-foreground">
+        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+        Recherche d&apos;un dossier de vérification…
+      </div>
+    )
+  }
+
+  if (caseQuery.isError) {
+    return (
+      <ErrorState
+        message="Impossible de consulter le dossier de vérification. Vérifiez votre connexion puis réessayez."
+        retry={() => caseQuery.refetch()}
+      />
+    )
+  }
+
+  const verificationCase = caseQuery.data ?? null
+
+  if (!verificationCase) {
+    return (
+      <PremiumEmptyState
+        icon={FileCheck2}
+        title="Aucune vérification en cours"
+        description={`Aucun dossier de vérification n'est ouvert pour « ${parcelName} ». Ouvrez un dossier en renseignant les informations du titre foncier à contrôler.`}
+        action={<OpenCaseDialog parcelId={parcelId} />}
+      />
+    )
+  }
+
+  return <CaseDetail verificationCase={verificationCase} isOfficial={isOfficial} />
+}
+
+/* ------------------------------------------------------------------ */
+/* Open case dialog                                                    */
+/* ------------------------------------------------------------------ */
+
+function OpenCaseDialog({ parcelId }: { parcelId: string }) {
+  const [open, setOpen] = useState(false)
+  const openCase = useOpenVerificationCase()
+
+  const [form, setForm] = useState({
+    tfNumber: "",
+    volume: "",
+    folio: "",
+    conservationOffice: "",
+    issueDate: "",
+    ownerName: "",
+    areaHectares: "",
+    location: "",
+  })
+
+  const setField = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm((f) => ({ ...f, [field]: e.target.value }))
+
+  const missingFields =
+    !form.tfNumber.trim() ||
+    !form.conservationOffice.trim() ||
+    !form.ownerName.trim() ||
+    !form.location.trim() ||
+    !form.issueDate ||
+    !(parseFloat(form.areaHectares) > 0)
+
+  const handleSubmit = async () => {
+    try {
+      await openCase.mutateAsync({
+        parcelId,
+        caseReference: generateCaseReference(),
+        reportedTitle: {
+          tfNumber: form.tfNumber.trim(),
+          volume: form.volume.trim(),
+          folio: form.folio.trim(),
+          conservationOffice: form.conservationOffice.trim(),
+          issueDate: new Date(form.issueDate).toISOString(),
+          ownerName: form.ownerName.trim(),
+          areaHectares: parseFloat(form.areaHectares),
+          location: form.location.trim(),
+          status: "DECLARE",
+        },
+      })
+      toast.success("Dossier de vérification ouvert.")
+      setOpen(false)
+    } catch {
+      toast.error("L'ouverture du dossier a échoué. Vérifiez les informations puis réessayez.")
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="gap-2 bg-emerald text-primary-foreground hover:bg-emerald/90">
+          <FileCheck2 className="h-4 w-4" />
+          Ouvrir une vérification de titre pour cette parcelle
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Ouvrir un dossier de vérification</DialogTitle>
+          <DialogDescription>
+            Renseignez les informations telles qu&apos;elles figurent sur le titre foncier.
+            Elles seront contrôlées au bureau des Domaines.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-3 py-2">
+          <FieldRow label="Numéro du titre foncier (TF)" required>
+            <Input value={form.tfNumber} onChange={setField("tfNumber")} placeholder="Ex : TF-4421-BKO" />
+          </FieldRow>
+          <div className="grid grid-cols-2 gap-3">
+            <FieldRow label="Volume">
+              <Input value={form.volume} onChange={setField("volume")} placeholder="Ex : 412" />
+            </FieldRow>
+            <FieldRow label="Folio">
+              <Input value={form.folio} onChange={setField("folio")} placeholder="Ex : 89" />
+            </FieldRow>
+          </div>
+          <FieldRow label="Bureau de la conservation foncière" required>
+            <Input
+              value={form.conservationOffice}
+              onChange={setField("conservationOffice")}
+              placeholder="Ex : Conservation de Bamako"
+            />
+          </FieldRow>
+          <FieldRow label="Date de délivrance" required>
+            <Input type="date" value={form.issueDate} onChange={setField("issueDate")} />
+          </FieldRow>
+          <FieldRow label="Propriétaire inscrit au titre" required>
+            <Input value={form.ownerName} onChange={setField("ownerName")} placeholder="Ex : Famille Traoré" />
+          </FieldRow>
+          <div className="grid grid-cols-2 gap-3">
+            <FieldRow label="Superficie (ha)" required>
+              <Input
+                type="number"
+                step="0.0001"
+                min="0"
+                value={form.areaHectares}
+                onChange={setField("areaHectares")}
+                placeholder="Ex : 4,8"
+              />
+            </FieldRow>
+            <FieldRow label="Localisation" required>
+              <Input value={form.location} onChange={setField("location")} placeholder="Ex : Kati, Koulikoro" />
+            </FieldRow>
+          </div>
+        </div>
+
+        {missingFields && (
+          <p className="text-xs text-muted-foreground">
+            Renseignez tous les champs obligatoires pour ouvrir le dossier.
+          </p>
+        )}
+
+        <Button
+          onClick={handleSubmit}
+          disabled={missingFields || openCase.isPending}
+          className="w-full bg-emerald text-primary-foreground hover:bg-emerald/90"
+        >
+          {openCase.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Ouvrir le dossier
+        </Button>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function FieldRow({
+  label,
+  required,
+  children,
+}: {
+  label: string
+  required?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs text-muted-foreground">
+        {label}
+        {required && <span className="text-danger"> *</span>}
+      </Label>
+      {children}
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/* Case detail: stepper, title facts, actions                          */
+/* ------------------------------------------------------------------ */
+
+function CaseDetail({
+  verificationCase,
+  isOfficial,
+}: {
+  verificationCase: TitleVerificationCase
+  isOfficial: boolean
+}) {
+  const status = verificationCase.status
+  const rank = STEP_RANK[status] ?? 0
+  const isTerminalFailure = status === "TF_REJECTED" || status === "DISPUTE_SIGNALED"
+
+  return (
+    <div className="space-y-4">
+      {/* Case header */}
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="font-mono text-xs text-muted-foreground">
+          Dossier {verificationCase.caseReference}
+        </span>
+        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+          Ouvert le {formatDateTime(verificationCase.createdAt)}
+        </span>
+      </div>
+
+      {/* Branch-state banners */}
+      {status === "TF_REJECTED" && (
+        <Banner
+          tone="danger"
+          title="Titre rejeté"
+          description={
+            verificationCase.requisition?.rejectionReason
+              ? `Motif : ${verificationCase.requisition.rejectionReason}`
+              : "Le titre présenté n'a pas été authentifié par le bureau des Domaines."
+          }
+        />
+      )}
+      {status === "DISPUTE_SIGNALED" && (
+        <Banner
+          tone="danger"
+          title="Litige signalé"
+          description="Un litige a été relevé lors du contrôle domanial. Le dossier est suspendu dans l'attente d'une résolution juridique."
+        />
+      )}
+      {status === "PENDING_COMPLEMENT" && (
+        <Banner
+          tone="warning"
+          title="Complément requis"
+          description="Le bureau des Domaines demande des pièces ou informations complémentaires. Complétez le dossier puis soumettez-le à nouveau."
+        />
+      )}
+
+      {/* Stepper */}
+      {!isTerminalFailure && (
+        <Card className="border-border/60 bg-card/40 p-5">
+          <ol className="grid gap-4 sm:grid-cols-5">
+            {STEPS.map((step, index) => {
+              const stepNumber = index + 1
+              const done = rank > stepNumber || status === "CERTIFIED"
+              const active = rank === stepNumber && status !== "CERTIFIED"
+              return (
+                <li key={step.status} className="flex items-start gap-3 sm:flex-col sm:items-center sm:text-center">
+                  <div
+                    className={cn(
+                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold transition-colors",
+                      done && "bg-emerald text-white",
+                      active && "bg-foreground text-background ring-4 ring-foreground/10",
+                      !done && !active && "border border-border bg-secondary text-muted-foreground",
+                    )}
+                  >
+                    {done ? <Check className="h-4 w-4" strokeWidth={3} /> : stepNumber}
                   </div>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{c.detail}</p>
-                  <Progress value={c.score} className="mt-2 h-1" />
-                </div>
-              </motion.li>
-            ))}
-          </ul>
+                  <span
+                    className={cn(
+                      "text-xs leading-snug",
+                      active ? "font-medium text-foreground" : done ? "text-emerald" : "text-muted-foreground",
+                    )}
+                  >
+                    {step.label}
+                  </span>
+                </li>
+              )
+            })}
+          </ol>
+        </Card>
+      )}
+
+      {status === "CERTIFIED" && (
+        <Banner
+          tone="success"
+          title="Titre certifié"
+          description={`Certification enregistrée${verificationCase.certifiedAt ? ` le ${formatDateTime(verificationCase.certifiedAt)}` : ""}.`}
+        />
+      )}
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Reported title facts */}
+        <Card className="border-border/60 bg-card/40">
+          <div className="flex items-center gap-2 border-b border-border/60 px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+            <ScrollText className="h-3.5 w-3.5" />
+            Titre déclaré
+          </div>
+          <dl className="space-y-2 p-4 text-sm">
+            <FactRow label="Numéro TF" value={verificationCase.reportedTitle.tfNumber} mono />
+            <FactRow
+              label="Volume / Folio"
+              value={
+                [verificationCase.reportedTitle.volume, verificationCase.reportedTitle.folio]
+                  .filter(Boolean)
+                  .join(" / ") || "Non renseigné"
+              }
+            />
+            <FactRow label="Conservation" value={verificationCase.reportedTitle.conservationOffice} />
+            <FactRow label="Délivré le" value={formatDateTime(verificationCase.reportedTitle.issueDate)} />
+            <FactRow label="Propriétaire inscrit" value={verificationCase.reportedTitle.ownerName} />
+            <FactRow label="Superficie" value={`${verificationCase.reportedTitle.areaHectares} ha`} />
+            <FactRow label="Localisation" value={verificationCase.reportedTitle.location} />
+          </dl>
+        </Card>
+
+        {/* Requisition result, if recorded */}
+        <Card className="border-border/60 bg-card/40">
+          <div className="flex items-center gap-2 border-b border-border/60 px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+            <Landmark className="h-3.5 w-3.5" />
+            Réquisition domaniale
+          </div>
+          {verificationCase.requisition ? (
+            <dl className="space-y-2 p-4 text-sm">
+              <FactRow label="N° de réquisition" value={verificationCase.requisition.requisitionNumber} mono />
+              <FactRow label="Bureau" value={verificationCase.requisition.domainOffice} />
+              <FactRow
+                label="Vérificateur"
+                value={`${verificationCase.requisition.verifierName} (${verificationCase.requisition.verifierRole})`}
+              />
+              <FactRow
+                label="Authenticité"
+                value={verificationCase.requisition.authenticityConfirmed ? "Confirmée" : "Non confirmée"}
+              />
+              <FactRow
+                label="Litige détecté"
+                value={verificationCase.requisition.litigationDetected ? "Oui" : "Non"}
+              />
+              {verificationCase.requisition.verificationNotes && (
+                <FactRow label="Observations" value={verificationCase.requisition.verificationNotes} />
+              )}
+            </dl>
+          ) : (
+            <p className="p-4 text-sm text-muted-foreground">
+              Aucune réquisition n&apos;a encore été enregistrée pour ce dossier.
+            </p>
+          )}
         </Card>
       </div>
 
-      {/* Recent verifications */}
-      <Card className="border-border/60 bg-card/40">
-        <div className="border-b border-border/60 px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-          Vérifications récentes — 24 dernières heures
-        </div>
-        <table className="w-full">
-          <thead className="border-b border-border/60 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-            <tr>
-              <th className="px-4 py-2 text-left">Document</th>
-              <th className="px-4 py-2 text-left">Soumis</th>
-              <th className="px-4 py-2 text-left">Statut</th>
-              <th className="px-4 py-2 text-right">Score</th>
-              <th className="px-4 py-2"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border/60">
-            {recentDocs.map((d) => (
-              <tr key={d.name} className="text-sm transition-colors hover:bg-secondary/40">
-                <td className="px-4 py-3 font-mono text-xs text-foreground">{d.name}</td>
-                <td className="px-4 py-3 text-muted-foreground">{d.date}</td>
-                <td className="px-4 py-3">
-                  <span
-                    className={
-                      d.status === "Authentique"
-                        ? "inline-flex items-center gap-1 rounded bg-emerald-soft px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.18em] text-emerald"
-                        : d.status === "Suspect"
-                          ? "inline-flex items-center gap-1 rounded bg-amber-400/15 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.18em] text-amber-500"
-                          : "inline-flex items-center gap-1 rounded bg-danger/15 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.18em] text-danger"
-                    }
-                  >
-                    {d.status === "Authentique" ? (
-                      <FileCheck2 className="h-3 w-3" />
-                    ) : (
-                      <XCircle className="h-3 w-3" />
-                    )}
-                    {d.status}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right font-mono text-xs text-foreground">
-                  {d.score}%
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <Button variant="ghost" size="sm" className="text-xs">
-                    Détail
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Card>
+      <CaseActions verificationCase={verificationCase} isOfficial={isOfficial} />
     </div>
+  )
+}
+
+function Banner({
+  tone,
+  title,
+  description,
+}: {
+  tone: "danger" | "warning" | "success"
+  title: string
+  description: string
+}) {
+  const toneClass = {
+    danger: "border-danger/30 bg-danger/10 text-danger",
+    warning: "border-amber-500/30 bg-amber-500/10 text-amber-500",
+    success: "border-emerald/30 bg-emerald-soft text-emerald",
+  }[tone]
+  const Icon = tone === "success" ? ShieldCheck : AlertTriangle
+  return (
+    <div className={cn("flex items-start gap-3 rounded-xl border p-4", toneClass)}>
+      <Icon className="mt-0.5 h-4 w-4 shrink-0" />
+      <div>
+        <p className="text-sm font-medium">{title}</p>
+        <p className="mt-0.5 text-xs opacity-80">{description}</p>
+      </div>
+    </div>
+  )
+}
+
+function FactRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <dt className="shrink-0 text-xs text-muted-foreground">{label}</dt>
+      <dd className={cn("text-right text-sm text-foreground", mono && "font-mono text-xs")}>{value}</dd>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/* Role-aware actions                                                  */
+/* ------------------------------------------------------------------ */
+
+function CaseActions({
+  verificationCase,
+  isOfficial,
+}: {
+  verificationCase: TitleVerificationCase
+  isOfficial: boolean
+}) {
+  const submit = useSubmitVerificationCase()
+  const startControl = useStartDomainControl()
+  const certify = useCertifyVerificationCase()
+
+  const ids = { id: verificationCase.id, parcelId: verificationCase.parcelId }
+  const status = verificationCase.status
+
+  const run = async (action: () => Promise<unknown>, successMessage: string) => {
+    try {
+      await action()
+      toast.success(successMessage)
+    } catch {
+      toast.error("L'opération a échoué. Vérifiez votre connexion puis réessayez.")
+    }
+  }
+
+  if (status === "CERTIFIED" || status === "TF_REJECTED" || status === "DISPUTE_SIGNALED") {
+    return null
+  }
+
+  return (
+    <Card className="border-border/60 bg-card/40 p-4">
+      <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+        Prochaine étape
+      </p>
+
+      {(status === "DRAFT" || status === "PENDING_COMPLEMENT") && (
+        <Button
+          onClick={() =>
+            run(() => submit.mutateAsync(ids), "Dossier soumis pour vérification.")
+          }
+          disabled={submit.isPending}
+          className="gap-2 bg-emerald text-primary-foreground hover:bg-emerald/90"
+        >
+          {submit.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          {status === "PENDING_COMPLEMENT" ? "Soumettre à nouveau" : "Soumettre pour vérification"}
+        </Button>
+      )}
+
+      {status === "PENDING_VERIFICATION" && (
+        <OfficialGate
+          isOfficial={isOfficial}
+          waitingMessage="Votre dossier est en file d'attente : un agent des Domaines prendra le relais pour le contrôle."
+        >
+          <Button
+            onClick={() =>
+              run(() => startControl.mutateAsync(ids), "Contrôle au bureau des Domaines démarré.")
+            }
+            disabled={startControl.isPending}
+            className="gap-2 bg-emerald text-primary-foreground hover:bg-emerald/90"
+          >
+            {startControl.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Landmark className="h-4 w-4" />}
+            Démarrer le contrôle domanial
+          </Button>
+        </OfficialGate>
+      )}
+
+      {status === "DOMAIN_CONTROL" && (
+        <OfficialGate
+          isOfficial={isOfficial}
+          waitingMessage="Le contrôle est en cours au bureau des Domaines. Le résultat de la réquisition sera affiché ici."
+        >
+          <RequisitionForm verificationCase={verificationCase} />
+        </OfficialGate>
+      )}
+
+      {status === "TF_VERIFIED" && (
+        <OfficialGate
+          isOfficial={isOfficial}
+          waitingMessage="Le titre a été vérifié. La certification finale sera prononcée par un notaire ou un agent habilité."
+        >
+          <Button
+            onClick={() => run(() => certify.mutateAsync(ids), "Titre certifié.")}
+            disabled={certify.isPending}
+            className="gap-2 bg-emerald text-primary-foreground hover:bg-emerald/90"
+          >
+            {certify.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+            Certifier le titre
+          </Button>
+        </OfficialGate>
+      )}
+    </Card>
+  )
+}
+
+/**
+ * Shows the action to officials; citizens get an honest waiting message and a
+ * disabled control with an explanatory tooltip instead of a dead button.
+ */
+function OfficialGate({
+  isOfficial,
+  waitingMessage,
+  children,
+}: {
+  isOfficial: boolean
+  waitingMessage: string
+  children: React.ReactNode
+}) {
+  if (isOfficial) return <>{children}</>
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">{waitingMessage}</p>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-block">
+            <Button disabled variant="outline" className="pointer-events-none gap-2">
+              <ShieldCheck className="h-4 w-4" />
+              Action de contrôle
+            </Button>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>{RESTRICTED_ACTION_HINT}</TooltipContent>
+      </Tooltip>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/* Requisition form (officials only)                                   */
+/* ------------------------------------------------------------------ */
+
+function RequisitionForm({ verificationCase }: { verificationCase: TitleVerificationCase }) {
+  const recordRequisition = useRecordRequisition()
+
+  const [form, setForm] = useState({
+    requisitionNumber: "",
+    domainOffice: verificationCase.reportedTitle.conservationOffice,
+    verifierName: "",
+    verifierRole: "",
+    verificationNotes: "",
+    authenticityConfirmed: false,
+    conflictDetected: false,
+    litigationDetected: false,
+    rejectionReason: "",
+  })
+
+  const needsRejectionReason = !form.authenticityConfirmed && !form.litigationDetected
+  const missing =
+    !form.requisitionNumber.trim() ||
+    !form.domainOffice.trim() ||
+    !form.verifierName.trim() ||
+    !form.verifierRole.trim() ||
+    (needsRejectionReason && !form.rejectionReason.trim())
+
+  const handleSubmit = async () => {
+    const requisition: TitleRequisition = {
+      requisitionNumber: form.requisitionNumber.trim(),
+      requisitionDate: new Date().toISOString(),
+      domainOffice: form.domainOffice.trim(),
+      verifierName: form.verifierName.trim(),
+      verifierRole: form.verifierRole.trim(),
+      verificationNotes: form.verificationNotes.trim(),
+      authenticityConfirmed: form.authenticityConfirmed,
+      conflictDetected: form.conflictDetected,
+      litigationDetected: form.litigationDetected,
+      rejectionReason: form.rejectionReason.trim() || null,
+    }
+    try {
+      await recordRequisition.mutateAsync({
+        id: verificationCase.id,
+        parcelId: verificationCase.parcelId,
+        requisition,
+      })
+      toast.success("Réquisition enregistrée.")
+    } catch {
+      toast.error("L'enregistrement de la réquisition a échoué. Réessayez.")
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Consignez le résultat de la réquisition effectuée au bureau des Domaines.
+      </p>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <FieldRow label="Numéro de réquisition" required>
+          <Input
+            value={form.requisitionNumber}
+            onChange={(e) => setForm((f) => ({ ...f, requisitionNumber: e.target.value }))}
+            placeholder="Ex : REQ-2026-0042"
+          />
+        </FieldRow>
+        <FieldRow label="Bureau des Domaines" required>
+          <Input
+            value={form.domainOffice}
+            onChange={(e) => setForm((f) => ({ ...f, domainOffice: e.target.value }))}
+          />
+        </FieldRow>
+        <FieldRow label="Nom du vérificateur" required>
+          <Input
+            value={form.verifierName}
+            onChange={(e) => setForm((f) => ({ ...f, verifierName: e.target.value }))}
+            placeholder="Ex : Moussa Koné"
+          />
+        </FieldRow>
+        <FieldRow label="Qualité du vérificateur" required>
+          <Input
+            value={form.verifierRole}
+            onChange={(e) => setForm((f) => ({ ...f, verifierRole: e.target.value }))}
+            placeholder="Ex : Agent des Domaines"
+          />
+        </FieldRow>
+      </div>
+
+      <FieldRow label="Observations">
+        <Textarea
+          value={form.verificationNotes}
+          onChange={(e) => setForm((f) => ({ ...f, verificationNotes: e.target.value }))}
+          placeholder="Constats effectués lors du contrôle…"
+          rows={3}
+        />
+      </FieldRow>
+
+      <div className="grid gap-2 sm:grid-cols-3">
+        <CheckboxRow
+          label="Authenticité confirmée"
+          checked={form.authenticityConfirmed}
+          onChange={(checked) => setForm((f) => ({ ...f, authenticityConfirmed: checked }))}
+        />
+        <CheckboxRow
+          label="Conflit détecté"
+          checked={form.conflictDetected}
+          onChange={(checked) => setForm((f) => ({ ...f, conflictDetected: checked }))}
+        />
+        <CheckboxRow
+          label="Litige détecté"
+          checked={form.litigationDetected}
+          onChange={(checked) => setForm((f) => ({ ...f, litigationDetected: checked }))}
+        />
+      </div>
+
+      {needsRejectionReason && (
+        <FieldRow label="Motif de rejet" required>
+          <Textarea
+            value={form.rejectionReason}
+            onChange={(e) => setForm((f) => ({ ...f, rejectionReason: e.target.value }))}
+            placeholder="Obligatoire lorsque l'authenticité n'est pas confirmée."
+            rows={2}
+          />
+        </FieldRow>
+      )}
+
+      {missing && (
+        <p className="text-xs text-muted-foreground">
+          Renseignez tous les champs obligatoires pour enregistrer la réquisition.
+        </p>
+      )}
+
+      <Button
+        onClick={handleSubmit}
+        disabled={missing || recordRequisition.isPending}
+        className="gap-2 bg-emerald text-primary-foreground hover:bg-emerald/90"
+      >
+        {recordRequisition.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+        Enregistrer la réquisition
+      </Button>
+    </div>
+  )
+}
+
+function CheckboxRow({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+}) {
+  return (
+    <label className="flex items-center gap-2 rounded-lg border border-border bg-background/40 px-3 py-2 text-sm">
+      <Checkbox checked={checked} onCheckedChange={(v) => onChange(v === true)} />
+      {label}
+    </label>
   )
 }
