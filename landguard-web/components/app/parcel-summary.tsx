@@ -1,14 +1,13 @@
 import {
   MapPin,
   ShieldCheck,
-  AlertTriangle,
   Hash,
   Calendar,
   Banknote,
   FileText,
 } from "lucide-react"
-import type { Parcel } from "@/lib/types"
-import { formatXof } from "@/lib/mock-data"
+import type { Parcel } from "@/lib/api/parcels"
+import { formatXof, formatDateTime, toLegacyStatus, toLegacyRisk } from "@/lib/api/parcel-display"
 import { StatusPill, RiskBadge } from "./pills"
 
 interface ParcelSummaryProps {
@@ -24,21 +23,21 @@ export function ParcelSummary({ parcel }: ParcelSummaryProps) {
             <h3 className="font-display text-base font-medium tracking-tight text-foreground">
               {parcel.name}
             </h3>
-            <StatusPill status={parcel.status} />
+            <StatusPill status={toLegacyStatus(parcel.status)} />
           </div>
           <p className="mt-1 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
             <MapPin className="h-3 w-3" />
-            {parcel.region}
+            {parcel.regionLabel}
           </p>
         </div>
-        <RiskBadge risk={parcel.risk} score={parcel.riskScore} />
+        <RiskBadge risk={toLegacyRisk(parcel.riskLevel)} score={parcel.riskScore} />
       </div>
 
       <dl className="grid grid-cols-2 divide-x divide-border/60 border-b border-border/60">
         <Stat
           icon={Banknote}
           label="Valeur estimée"
-          value={formatXof(parcel.estimatedValue)}
+          value={formatXof(parcel.estimatedValueXof)}
           accent
         />
         <Stat
@@ -53,13 +52,20 @@ export function ParcelSummary({ parcel }: ParcelSummaryProps) {
         {parcel.titleNumber && (
           <Row icon={FileText} label="Numéro de Titre Foncier" value={parcel.titleNumber} mono accent />
         )}
-        <Row icon={Hash} label="Empreinte Blockchain" value={parcel.blockchainHash} mono />
-        <Row icon={Calendar} label="Dernière vérification" value={parcel.lastVerifiedAt} />
-        <Row icon={MapPin} label="Superficie" value={`${parcel.area} ha`} />
         <Row
-          icon={AlertTriangle}
+          icon={Calendar}
+          label="Dernière vérification"
+          value={parcel.lastVerifiedAt ? formatDateTime(parcel.lastVerifiedAt) : "Aucune vérification enregistrée"}
+        />
+        <Row icon={MapPin} label="Superficie" value={`${parcel.areaHectares} ha`} />
+        <Row
+          icon={MapPin}
           label="Coordonnées GPS"
-          value={parcel.coordinates ? `${parcel.coordinates.lat.toFixed(4)}°, ${parcel.coordinates.lng.toFixed(4)}°` : "Données GPS indisponibles"}
+          value={
+            parcel.centroid
+              ? `${parcel.centroid.latitude.toFixed(4)}°, ${parcel.centroid.longitude.toFixed(4)}°`
+              : "Données GPS indisponibles"
+          }
           mono
         />
       </dl>

@@ -22,32 +22,32 @@ const features = [
   {
     icon: QrCode,
     title: "Scan QR de bornage",
-    desc: "Validez l'identité d'une parcelle sur le terrain en moins de 2 secondes.",
+    desc: "Validez l'identité d'une parcelle directement sur le terrain.",
   },
   {
     icon: Camera,
     title: "Capture photo géolocalisée",
-    desc: "Chaque cliché est horodaté, signé GPS et envoyé en blockchain.",
+    desc: "Chaque cliché est horodaté, géolocalisé et versé au dossier de la parcelle.",
   },
   {
     icon: Mic,
     title: "Notes vocales multilingues",
-    desc: "Dictée IA en français, bambara, wolof, dioula et hausa.",
+    desc: "Dictée en français, bambara, wolof, dioula et hausa.",
   },
   {
     icon: WifiOff,
-    title: "Mode hors-ligne complet",
-    desc: "Synchronisation différée dès retour de la connexion 3G/4G/Starlink.",
+    title: "Mode hors-ligne",
+    desc: "Saisie sur le terrain puis synchronisation dès le retour de la connexion.",
   },
   {
     icon: Sparkles,
-    title: "Assistant vocal IA",
-    desc: '"Boussole, vérifie cette parcelle" — commandes vocales naturelles.',
+    title: "Assistant vocal",
+    desc: "Commandes vocales simples pour consulter une parcelle sans les mains.",
   },
   {
     icon: MapPin,
-    title: "GPS RTK centimétrique",
-    desc: "Précision 2 cm via les antennes de référence partenaires.",
+    title: "Relevés GPS",
+    desc: "Localisation précise des bornes pour préparer les levés officiels.",
   },
 ]
 
@@ -72,17 +72,16 @@ export default function MobilePage() {
             BOUSSOLE Field — l&apos;outil des agents et propriétaires
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Une expérience mobile-first pensée pour les zones rurales : ultra légère, hors-ligne par
-            défaut, multilingue et accessible aux agents non techniques.
+            Une expérience mobile-first pensée pour les zones rurales : légère, utilisable
+            hors-ligne, multilingue et accessible aux agents non techniques. Les écrans
+            ci-dessous sont des maquettes du concept — l&apos;application est en cours de
+            développement et n&apos;est pas encore disponible.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1.5 rounded-md border border-emerald/30 bg-emerald-soft px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-emerald">
-            <Smartphone className="h-3 w-3" />
-            iOS · Android · PWA
-          </span>
           <span className="flex items-center gap-1.5 rounded-md border border-border bg-secondary px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-            <Languages className="h-3 w-3" />5 langues
+            <Smartphone className="h-3 w-3" />
+            Aperçu du concept
           </span>
         </div>
       </div>
@@ -123,9 +122,8 @@ export default function MobilePage() {
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 px-4 py-3">
           <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
             <Languages className="h-3.5 w-3.5" />
-            Langues prises en charge — voix et écriture
+            Langues prévues — voix et écriture
           </div>
-          <div className="font-mono text-[10px] text-emerald">+8 prévues d&apos;ici 2027</div>
         </div>
         <div className="grid grid-cols-2 gap-px bg-border/60 sm:grid-cols-5">
           {languages.map((l) => (
@@ -276,7 +274,7 @@ function ScreenScan() {
           ].map((c, i) => (
             <div key={i} className={`absolute h-8 w-8 border-emerald-400 ${c}`} />
           ))}
-          {/* Mock QR */}
+          {/* Illustrative QR pattern — part of the clearly-labelled concept mockup */}
           <div className="absolute inset-6 grid grid-cols-8 gap-px">
             {Array.from({ length: 64 }).map((_, i) => {
               const filled =

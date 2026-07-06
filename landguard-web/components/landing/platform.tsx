@@ -6,24 +6,36 @@ const pillars = [
     title: "Œil satellite",
     eyebrow: "01 — Imagerie",
     description:
-      "Acquisition multi-sources (Sentinel-2, Maxar, Planet) et fusion d'images haute résolution avec time-lapse historique sur 10 ans.",
-    bullets: ["Résolution 0,3 m", "Revisite < 24 h", "Couverture pan-africaine"],
+      "Acquisition d'imagerie satellite et suivi visuel du terrain dans le temps, pour constater tout changement sur une parcelle surveillée.",
+    bullets: [
+      "Surveillance continue du territoire",
+      "Historique visuel du terrain",
+      "Clichés horodatés et traçables",
+    ],
   },
   {
     icon: Brain,
     title: "Cerveau IA",
     eyebrow: "02 — Intelligence",
     description:
-      "Modèles de vision et de langage spécialisés foncier — détection d'anomalies, OCR de titres, prédiction de litiges et analyse cadastrale.",
-    bullets: ["Précision 99,8 %", "Détection en < 6 min", "OCR multilingue"],
+      "Analyse automatisée au service des agents et des propriétaires — lecture assistée des titres et signalement des changements suspects, toujours confirmés par un expert humain.",
+    bullets: [
+      "Détection de changements suspects",
+      "Lecture assistée des titres fonciers",
+      "Validation humaine systématique",
+    ],
   },
   {
     icon: Hexagon,
     title: "Cœur blockchain",
     eyebrow: "03 — Confiance",
     description:
-      "Registre distribué propre à LA BOUSSOLE — transactions horodatées, signatures notariales et certificats numériques infalsifiables.",
-    bullets: ["Hash SHA-256", "Smart-contracts OHADA", "Certificat NFT foncier"],
+      "Chaque étape clé du cycle de vie d'une parcelle est ancrée dans un registre horodaté et infalsifiable, consultable à tout moment.",
+    bullets: [
+      "Empreinte SHA-256",
+      "Ancrages horodatés",
+      "Preuves vérifiables à tout moment",
+    ],
   },
 ]
 

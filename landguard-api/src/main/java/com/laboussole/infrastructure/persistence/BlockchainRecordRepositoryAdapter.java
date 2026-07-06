@@ -3,6 +3,8 @@ package com.laboussole.infrastructure.persistence;
 import com.laboussole.domain.model.blockchain.BlockchainRecord;
 import com.laboussole.domain.port.out.blockchain.BlockchainRecordRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -40,6 +42,15 @@ public class BlockchainRecordRepositoryAdapter implements BlockchainRecordReposi
     @Override
     public Optional<BlockchainRecord> findByHash(String hash) {
         return repository.findByHash(hash).map(this::mapToDomain);
+    }
+
+    @Override
+    public List<BlockchainRecord> findMostRecent(int limit) {
+        return repository
+                .findAll(PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "anchoredAt")))
+                .getContent().stream()
+                .map(this::mapToDomain)
+                .collect(Collectors.toList());
     }
 
     private BlockchainRecord mapToDomain(BlockchainRecordJpaEntity entity) {

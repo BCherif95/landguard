@@ -41,3 +41,14 @@ export function formatXof(amount: number): string {
     maximumFractionDigits: 0,
   }).format(amount)
 }
+
+export function formatDate(iso: string): string {
+  return new Intl.DateTimeFormat("fr-FR", { dateStyle: "long" }).format(new Date(iso))
+}
+
+export function formatDateTime(iso: string): string {
+  return new Intl.DateTimeFormat("fr-FR", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(iso))
+}

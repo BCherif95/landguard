@@ -41,24 +41,12 @@ const initialMessages: Message[] = [
   },
 ]
 
-const sampleAnalysis = {
-  query: "Analyser le titre foncier TF-2847-CIV pour identifier les zones de risque",
-  response: `J'ai analysé le titre TF-2847-CIV (Yopougon, parcelle 247) et identifié 3 points d'attention :
-
-**1. Antériorité — Conforme**
-Le titre remonte à un acte authentique du 14 mars 1987, enregistré au Livre Foncier d'Abidjan, volume 412 folio 89. Aucune chaîne de propriété rompue.
-
-**2. Servitude de passage — Vigilance**
-Une servitude conventionnelle de passage de 4m grève la parcelle au sud (acte du 12/06/2014). Risque limité mais à mentionner dans toute cession.
-
-**3. Empiètement détecté — Action requise**
-La détection satellite du 02/05/2026 révèle une construction non déclarée empiétant 38 m² à l'angle nord-est. Recommandation : sommation interpellative dans les 15 jours pour préserver vos droits.`,
-  citations: [
-    "Code domanial CIV — Art. 543",
-    "OHADA — Acte uniforme sûretés, art. 192",
-    "Cass. CIV. 1ère, 14 nov. 2019, n°18-23.456",
-  ],
-}
+// No AI backend is wired yet: rather than fabricate a legal analysis, the
+// assistant answers honestly that the service is not available.
+const UNAVAILABLE_RESPONSE =
+  "Le conseiller juridique automatisé n'est pas encore disponible sur cette plateforme. " +
+  "Votre question n'a pas été analysée. Pour toute étude de titre ou préparation de dossier, " +
+  "rapprochez-vous d'un notaire ou d'un agent habilité depuis le module Vérification."
 
 export default function JuridiquePage() {
   const [messages, setMessages] = useState<Message[]>(initialMessages)
@@ -71,9 +59,9 @@ export default function JuridiquePage() {
     setInput("")
     setThinking(true)
     setTimeout(() => {
-      setMessages((m) => [...m, { role: "assistant", content: sampleAnalysis.response }])
+      setMessages((m) => [...m, { role: "assistant", content: UNAVAILABLE_RESPONSE }])
       setThinking(false)
-    }, 1400)
+    }, 400)
   }
 
   return (
@@ -83,16 +71,12 @@ export default function JuridiquePage() {
           <p className="text-xs uppercase tracking-[0.3em] text-accent">Conseil IA</p>
           <h1 className="mt-2 font-serif text-3xl font-medium tracking-tight">BOUSSOLE Juris</h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Modèle juridique entraîné sur le droit foncier OHADA, 14 codes nationaux et 320 000 décisions
-            jurisprudentielles.
+            Assistant dédié au droit foncier. Service en cours de développement :
+            aucune analyse automatisée n&apos;est encore réalisée.
           </p>
         </div>
-        <div className="flex items-center gap-2 rounded-full border border-accent/30 bg-accent/5 px-4 py-2 text-xs text-accent">
-          <span className="relative flex size-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
-            <span className="relative inline-flex size-2 rounded-full bg-accent" />
-          </span>
-          Modèle BoussoleJuris-3 · v2026.05
+        <div className="flex items-center gap-2 rounded-full border border-border bg-secondary px-4 py-2 text-xs text-muted-foreground">
+          Service à venir
         </div>
       </div>
 
@@ -106,13 +90,9 @@ export default function JuridiquePage() {
               </div>
               <div>
                 <p className="text-sm font-medium">Conversation juridique</p>
-                <p className="text-xs text-muted-foreground">Confidentialité avocat-client garantie</p>
+                <p className="text-xs text-muted-foreground">Service en cours de développement</p>
               </div>
             </div>
-            <Button variant="ghost" size="sm" className="gap-2 text-xs">
-              <FileText className="size-3.5" />
-              Exporter
-            </Button>
           </div>
 
           <div className="flex-1 space-y-4 overflow-y-auto p-6">
@@ -138,18 +118,6 @@ export default function JuridiquePage() {
                   }`}
                 >
                   <p className="whitespace-pre-line">{m.content}</p>
-                  {m.role === "assistant" && i === messages.length - 1 && messages.length > 1 && (
-                    <div className="mt-4 flex flex-wrap gap-1.5 border-t border-border/40 pt-3">
-                      {sampleAnalysis.citations.map((c) => (
-                        <span
-                          key={c}
-                          className="rounded-md border border-accent/20 bg-accent/5 px-2 py-0.5 text-[10px] text-accent"
-                        >
-                          {c}
-                        </span>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </motion.div>
             ))}
@@ -236,22 +204,6 @@ export default function JuridiquePage() {
             </div>
           </div>
 
-          <div className="glass rounded-3xl border border-border/60 p-6">
-            <h3 className="font-serif text-lg tracking-tight">Sources interrogées</h3>
-            <div className="mt-4 space-y-3 text-xs">
-              {[
-                { label: "Code domanial OHADA", value: "11 États · 4 200 articles" },
-                { label: "Jurisprudence CCJA", value: "12 800 arrêts indexés" },
-                { label: "Décisions nationales", value: "320 000 décisions FR · EN" },
-                { label: "Doctrine académique", value: "47 revues spécialisées" },
-              ].map((s) => (
-                <div key={s.label} className="flex items-center justify-between border-b border-border/40 pb-2 last:border-0">
-                  <span className="text-foreground">{s.label}</span>
-                  <span className="text-muted-foreground">{s.value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </div>

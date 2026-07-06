@@ -2,10 +2,16 @@
 
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { ArrowUpRight, ShieldCheck, Satellite, Sparkles } from "lucide-react"
+import {
+  ArrowUpRight,
+  BellRing,
+  Hexagon,
+  Map,
+  Satellite,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { SatelliteMap } from "@/components/satellite/satellite-map"
-import { parcels, anomalies } from "@/lib/mock-data"
 
 export function LandingHero() {
   return (
@@ -98,15 +104,15 @@ export function LandingHero() {
           >
             <span className="flex items-center gap-1.5">
               <ShieldCheck className="h-3.5 w-3.5 text-emerald" />
-              Conforme OHADA
+              Conçu pour le droit foncier malien
             </span>
             <span className="hidden sm:inline">·</span>
             <span className="flex items-center gap-1.5">
               <Satellite className="h-3.5 w-3.5 text-emerald" />
-              Sentinel-2 / Maxar
+              Imagerie satellite
             </span>
             <span className="hidden sm:inline">·</span>
-            <span>Chiffrement AES-256</span>
+            <span>Sessions et données sécurisées</span>
           </motion.div>
         </div>
 
@@ -132,40 +138,29 @@ export function LandingHero() {
               <span className="font-mono text-[10px] text-emerald">● LIVE</span>
             </div>
 
-            {/* Inner dashboard preview */}
-            <div className="grid gap-3 p-3 md:grid-cols-[1fr_280px]">
-              <SatelliteMap
-                parcels={parcels}
-                anomalies={anomalies}
-                selectedParcelId={parcels[2].id}
-                intensity="high"
-                className="aspect-[16/10] md:aspect-[16/10]"
+            {/* Inner capability preview — qualitative on purpose: the marketing
+                page shows what the platform does, never invented figures. */}
+            <div className="grid gap-3 p-3 sm:grid-cols-2">
+              <HeroCapability
+                icon={Satellite}
+                title="Surveillance satellite"
+                description="Suivi visuel continu de chaque parcelle enregistrée, avec historique des clichés."
               />
-              <div className="flex flex-col gap-3">
-                <HeroStat
-                  label="Parcelles surveillées"
-                  value="2 847"
-                  delta="+12 cette semaine"
-                  positive
-                />
-                <HeroStat
-                  label="Alertes critiques"
-                  value="3"
-                  delta="dernière 24 h"
-                />
-                <HeroStat
-                  label="Score de confiance"
-                  value="96 %"
-                  delta="moyenne réseau"
-                  positive
-                />
-                <HeroStat
-                  label="Valeur sous gestion"
-                  value="2,4 Md FCFA"
-                  delta="+4,1 % MoM"
-                  positive
-                />
-              </div>
+              <HeroCapability
+                icon={BellRing}
+                title="Alertes en temps réel"
+                description="Notification immédiate en cas de construction, d'occupation ou d'activité suspecte."
+              />
+              <HeroCapability
+                icon={Map}
+                title="Registre numérique"
+                description="Vos parcelles, titres et documents réunis dans un dossier consultable à tout moment."
+              />
+              <HeroCapability
+                icon={Hexagon}
+                title="Preuves blockchain"
+                description="Les étapes clés du dossier sont ancrées dans un registre horodaté et infalsifiable."
+              />
             </div>
           </div>
         </motion.div>
@@ -174,32 +169,28 @@ export function LandingHero() {
   )
 }
 
-function HeroStat({
-  label,
-  value,
-  delta,
-  positive,
+function HeroCapability({
+  icon: Icon,
+  title,
+  description,
 }: {
-  label: string
-  value: string
-  delta: string
-  positive?: boolean
+  icon: typeof Satellite
+  title: string
+  description: string
 }) {
   return (
-    <div className="rounded-lg border border-border bg-background/40 p-3.5">
-      <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-        {label}
+    <div className="rounded-lg border border-border bg-background/40 p-4">
+      <div className="flex items-center gap-2.5">
+        <div className="flex h-8 w-8 items-center justify-center rounded-md border border-emerald/30 bg-emerald-soft text-emerald">
+          <Icon className="h-4 w-4" />
+        </div>
+        <div className="font-display text-base font-medium tracking-tight text-foreground">
+          {title}
+        </div>
       </div>
-      <div className="mt-1.5 font-display text-2xl font-medium tracking-tight text-foreground">
-        {value}
-      </div>
-      <div
-        className={`mt-1 text-xs ${
-          positive ? "text-emerald" : "text-muted-foreground"
-        }`}
-      >
-        {delta}
-      </div>
+      <p className="mt-2.5 text-xs leading-relaxed text-muted-foreground">
+        {description}
+      </p>
     </div>
   )
 }

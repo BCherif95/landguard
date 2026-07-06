@@ -1,35 +1,42 @@
-import { Fingerprint, Lock, KeyRound, ScanFace, FileLock2, History } from "lucide-react"
+import { Lock, KeyRound, EyeOff, Timer, FileLock2, History } from "lucide-react"
 
+// Only mechanisms actually implemented by the platform are listed here.
 const features = [
   {
-    icon: Fingerprint,
-    title: "Biométrie & MFA",
-    description: "Reconnaissance faciale, empreinte et codes OTP pour chaque opération sensible.",
+    icon: KeyRound,
+    title: "Accès par rôle",
+    description:
+      "Citoyen, agent, notaire, banquier, administrateur : chaque profil n'accède qu'aux fonctions et aux données de sa mission.",
   },
   {
-    icon: KeyRound,
-    title: "RBAC granulaire",
-    description: "Permissions par rôle, par parcelle et par opération — auditées en continu.",
+    icon: EyeOff,
+    title: "Cloisonnement des données",
+    description:
+      "Un propriétaire ne voit que ses propres parcelles. Le registre complet est réservé aux agents habilités.",
+  },
+  {
+    icon: Timer,
+    title: "Sessions à durée limitée",
+    description:
+      "Jetons d'accès signés et à expiration courte : toute session expirée exige une reconnexion.",
   },
   {
     icon: Lock,
-    title: "Chiffrement AES-256",
-    description: "Données chiffrées au repos et en transit avec rotation de clés HSM.",
-  },
-  {
-    icon: ScanFace,
-    title: "Détection comportementale",
-    description: "Modèle IA qui repère les anomalies d'usage et bloque les sessions suspectes.",
+    title: "Mots de passe protégés",
+    description:
+      "Les mots de passe sont hachés avec un algorithme robuste et ne sont jamais conservés en clair.",
   },
   {
     icon: FileLock2,
-    title: "Hash blockchain",
-    description: "Chaque document est ancré on-chain avec preuve d'horodatage opposable.",
+    title: "Ancrage blockchain",
+    description:
+      "Les étapes clés d'un dossier sont ancrées avec une empreinte SHA-256 horodatée et vérifiable.",
   },
   {
     icon: History,
-    title: "Audit logs immuables",
-    description: "Traçabilité complète, exportable pour les autorités et les régulateurs.",
+    title: "Traçabilité des successions",
+    description:
+      "Chaque action d'un plan de succession est journalisée et consultable dans le dossier.",
   },
 ]
 
@@ -49,8 +56,8 @@ export function LandingSecurity() {
             Conçu comme une infrastructure d&apos;État.
           </h2>
           <p className="mt-4 text-pretty text-muted-foreground">
-            Chaque couche — du chiffrement à la blockchain — protège votre patrimoine
-            avec des standards que les ministères du foncier exigent.
+            Chaque couche — de l&apos;authentification à la blockchain — est pensée pour
+            protéger votre patrimoine foncier.
           </p>
         </div>
 

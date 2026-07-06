@@ -1,38 +1,130 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import Link from "next/link"
 import {
   ShieldCheck,
   Satellite,
   Banknote,
-  Clock,
   Eye,
-  Layers,
-  History,
-  Maximize2,
+  Loader2,
+  MapPinned,
 } from "lucide-react"
+import dynamic from "next/dynamic"
 import { AppTopbar } from "@/components/app/app-topbar"
-import { SatelliteMap } from "@/components/satellite/satellite-map"
 import { KpiCard } from "@/components/app/kpi-card"
 import { RiskGauge } from "@/components/app/risk-gauge"
 import { AlertFeed } from "@/components/app/alert-feed"
-import { ActivityTimeline } from "@/components/app/activity-timeline"
 import { ParcelSummary } from "@/components/app/parcel-summary"
 import { MovementChart } from "@/components/app/movement-chart"
+import { ParcelDetailSheet } from "@/components/app/parcel-detail-sheet"
+import { PremiumEmptyState, ErrorState } from "@/components/app/empty-states"
 import { Button } from "@/components/ui/button"
-import { parcels, anomalies, activity } from "@/lib/mock-data"
-
+import { useParcels } from "@/lib/hooks/use-parcels"
+import { useMonitoringEvents } from "@/lib/hooks/use-monitoring-events"
+import { useMonitoringStream } from "@/lib/hooks/use-monitoring-stream"
+import { useParcelUIStore } from "@/lib/store/parcel-ui.store"
+import { formatXof } from "@/lib/api/parcel-display"
 import { AppErrorBoundary } from "@/components/app/error-boundary"
 
-export default function VisionLivePage() {
-  const [selectedId, setSelectedId] = useState<string>(parcels[0]?.id || "")
-  const selected = parcels.find((p) => p.id === selectedId) || parcels[0]
+// Leaflet touches `window`; the map must never render on the server.
+const ParcelMap = dynamic(
+  () => import("@/components/map/parcel-map").then((m) => m.ParcelMap),
+  { ssr: false },
+)
 
-  if (!selected) {
+export default function VisionLivePage() {
+  const { data: parcels, isLoading, isError, refetch } = useParcels({ limit: 200 })
+  const { events, isLoading: eventsLoading } = useMonitoringEvents()
+  useMonitoringStream()
+
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const openDetails = useParcelUIStore((s) => s.openDetails)
+
+  useEffect(() => {
+    if (!selectedId && parcels && parcels.length > 0) {
+      setSelectedId(parcels[0].id)
+    }
+  }, [parcels, selectedId])
+
+  const selected = useMemo(
+    () => parcels?.find((p) => p.id === selectedId) ?? null,
+    [parcels, selectedId],
+  )
+
+  const unresolvedEvents = useMemo(() => events.filter((e) => !e.resolved), [events])
+
+  const averageTrustScore = useMemo(() => {
+    if (!parcels || parcels.length === 0) return null
+    return Math.round(parcels.reduce((sum, p) => sum + p.trustScore, 0) / parcels.length)
+  }, [parcels])
+
+  const totalEstimatedValue = useMemo(
+    () => (parcels ?? []).reduce((sum, p) => sum + (p.estimatedValueXof || 0), 0),
+    [parcels],
+  )
+
+  // Real 7-day series: monitoring events grouped by day of detection.
+  const weeklyEventSeries = useMemo(() => {
+    const days: { label: string; value: number }[] = []
+    const dayFormat = new Intl.DateTimeFormat("fr-FR", { weekday: "short" })
+    for (let i = 6; i >= 0; i--) {
+      const day = new Date()
+      day.setHours(0, 0, 0, 0)
+      day.setDate(day.getDate() - i)
+      const next = new Date(day)
+      next.setDate(day.getDate() + 1)
+      const count = events.filter((e) => {
+        const at = new Date(e.detectedAt)
+        return at >= day && at < next
+      }).length
+      days.push({ label: dayFormat.format(day), value: count })
+    }
+    return days
+  }, [events])
+
+  if (isLoading) {
     return (
       <AppErrorBoundary name="Tableau de bord">
-         {/* ... render an empty state or something minimal */}
-         <div className="p-8 text-center text-muted-foreground">Aucune donnée disponible.</div>
+        <AppTopbar title="Vision Live" subtitle="Centre de commandement foncier · Temps réel" />
+        <div className="flex flex-1 items-center justify-center p-16 text-muted-foreground">
+          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+          Chargement de vos parcelles…
+        </div>
+      </AppErrorBoundary>
+    )
+  }
+
+  if (isError) {
+    return (
+      <AppErrorBoundary name="Tableau de bord">
+        <AppTopbar title="Vision Live" subtitle="Centre de commandement foncier · Temps réel" />
+        <div className="p-4 sm:p-6">
+          <ErrorState
+            message="Impossible de charger vos parcelles. Vérifiez votre connexion puis réessayez."
+            retry={() => refetch()}
+          />
+        </div>
+      </AppErrorBoundary>
+    )
+  }
+
+  if (!parcels || parcels.length === 0) {
+    return (
+      <AppErrorBoundary name="Tableau de bord">
+        <AppTopbar title="Vision Live" subtitle="Centre de commandement foncier · Temps réel" />
+        <div className="p-4 sm:p-6">
+          <PremiumEmptyState
+            icon={MapPinned}
+            title="Aucune parcelle enregistrée"
+            description="Ajoutez votre première parcelle pour démarrer la surveillance satellite et recevoir des alertes en temps réel."
+            action={
+              <Button asChild className="bg-emerald text-primary-foreground hover:bg-emerald/90">
+                <Link href="/registre">Enregistrer une parcelle</Link>
+              </Button>
+            }
+          />
+        </div>
       </AppErrorBoundary>
     )
   }
@@ -43,146 +135,95 @@ export default function VisionLivePage() {
         title="Vision Live"
         subtitle="Centre de commandement foncier · Temps réel"
       />
-      {/* ... rest of the component */}
 
       <div className="flex-1 space-y-4 p-4 sm:p-6">
-        {/* KPI ribbon */}
+        {/* KPI ribbon — every figure below is computed from the user's real data. */}
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <KpiCard
-            label="Parcelles surveillées"
-            value="2 847"
-            delta="+12 cette semaine"
-            trend="up"
+            label="Parcelles enregistrées"
+            value={parcels.length.toLocaleString("fr-FR")}
             icon={Eye}
             accent="emerald"
-            sparkline={[10, 12, 11, 14, 18, 22, 24, 28]}
           />
           <KpiCard
-            label="Alertes critiques"
-            value="3"
-            delta="−1 vs hier"
-            trend="down"
+            label="Alertes non résolues"
+            value={eventsLoading ? "…" : unresolvedEvents.length.toLocaleString("fr-FR")}
             icon={Satellite}
-            accent="danger"
-            sparkline={[5, 4, 6, 4, 5, 3, 4, 3]}
+            accent={unresolvedEvents.length > 0 ? "danger" : "emerald"}
           />
           <KpiCard
-            label="Score de confiance"
-            value="96%"
-            delta="+0,4 pts"
-            trend="up"
+            label="Score de confiance moyen"
+            value={averageTrustScore === null ? "—" : `${averageTrustScore}/100`}
             icon={ShieldCheck}
             accent="emerald"
-            sparkline={[92, 93, 92, 94, 95, 95, 96, 96]}
           />
           <KpiCard
-            label="Valeur sous gestion"
-            value="2,4 Md FCFA"
-            delta="+4,1% MoM"
-            trend="up"
+            label="Valeur totale estimée"
+            value={formatXof(totalEstimatedValue)}
             icon={Banknote}
             accent="gold"
-            sparkline={[2, 2.1, 2.05, 2.2, 2.25, 2.3, 2.35, 2.4]}
           />
         </div>
 
         {/* Map + side rail */}
         <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
           <div className="space-y-4">
-            {/* Satellite map card */}
             <div className="overflow-hidden rounded-xl border border-border bg-card/60">
               <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
                 <div className="flex items-center gap-2">
                   <h2 className="font-display text-sm font-medium text-foreground">
-                    Carte satellite — Afrique de l&apos;Ouest
+                    Carte de vos parcelles
                   </h2>
                   <span className="rounded border border-emerald/30 bg-emerald-soft px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.18em] text-emerald">
                     LIVE
                   </span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <ToolBtn icon={Layers} label="Calques" />
-                  <ToolBtn icon={History} label="Historique" />
-                  <ToolBtn icon={Clock} label="Time-lapse" />
-                  <ToolBtn icon={Maximize2} label="Plein écran" />
-                </div>
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="h-8 border-border bg-background/40 text-xs hover:bg-secondary"
+                >
+                  <Link href="/carte">Ouvrir la carte complète</Link>
+                </Button>
               </div>
-              <SatelliteMap
-                parcels={parcels}
-                anomalies={anomalies}
-                selectedParcelId={selectedId}
-                onSelectParcel={setSelectedId}
-                intensity="high"
-                className="aspect-[16/9] rounded-none border-0"
-              />
-              {/* Time-lapse scrubber */}
-              <div className="border-t border-border/60 p-3">
-                <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                  <span>Time-lapse · 12 derniers mois</span>
-                  <span className="text-emerald">12 mars 2026 · 11:42</span>
-                </div>
-                <div className="mt-2 h-2 rounded-full bg-secondary">
-                  <div
-                    className="relative h-full rounded-full bg-gradient-to-r from-emerald via-gold to-danger"
-                    style={{ width: "78%" }}
-                  >
-                    <span className="absolute right-0 top-1/2 h-3.5 w-3.5 -translate-y-1/2 translate-x-1/2 rounded-full border-2 border-card bg-foreground shadow-md" />
-                  </div>
-                </div>
-                <div className="mt-2 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                  <span>Mars 2025</span>
-                  <span>Sept. 2025</span>
-                  <span>Mars 2026</span>
-                </div>
+              <div className="aspect-[16/9]">
+                <ParcelMap
+                  parcels={parcels}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                />
               </div>
             </div>
 
-            <MovementChart />
+            <MovementChart
+              data={weeklyEventSeries}
+              title="Événements de surveillance — 7 derniers jours"
+              unit="Événements"
+            />
           </div>
 
           {/* Side rail */}
           <div className="space-y-4">
-            <ParcelSummary parcel={selected} />
-            <RiskGauge score={selected.riskScore} />
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                variant="outline"
-                className="h-10 border-border bg-card/60 text-xs hover:bg-secondary"
-              >
-                Exporter preuve
-              </Button>
-              <Button className="h-10 bg-emerald text-xs text-primary-foreground hover:bg-emerald/90">
-                Verrouiller la parcelle
-              </Button>
-            </div>
+            {selected && (
+              <>
+                <ParcelSummary parcel={selected} />
+                <RiskGauge score={selected.riskScore} />
+                <Button
+                  onClick={() => openDetails(selected.id)}
+                  className="w-full bg-emerald text-xs text-primary-foreground hover:bg-emerald/90"
+                >
+                  Voir le dossier complet
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Alerts + Activity */}
-        <div className="grid gap-4 lg:grid-cols-2">
-          <AlertFeed alerts={anomalies} />
-          <ActivityTimeline entries={activity} />
-        </div>
+        <AlertFeed events={unresolvedEvents} parcels={parcels} />
       </div>
-    </AppErrorBoundary>
-  )
-}
 
-function ToolBtn({
-  icon: Icon,
-  label,
-}: {
-  icon: typeof Layers
-  label: string
-}) {
-  return (
-    <button
-      type="button"
-      className="flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-      aria-label={label}
-    >
-      <Icon className="h-3 w-3" />
-      <span className="hidden sm:inline">{label}</span>
-    </button>
+      <ParcelDetailSheet />
+    </AppErrorBoundary>
   )
 }

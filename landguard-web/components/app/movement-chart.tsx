@@ -11,23 +11,14 @@ import {
 } from "recharts"
 
 interface MovementChartProps {
-  data?: Array<{ label: string; value: number }>
+  /** Real series only — the chart never invents values when data is missing. */
+  data: Array<{ label: string; value: number }>
   unit?: string
   title?: string
 }
 
-const defaultData = [
-  { day: "Lun", mouvements: 4, alertes: 0 },
-  { day: "Mar", mouvements: 6, alertes: 1 },
-  { day: "Mer", mouvements: 9, alertes: 1 },
-  { day: "Jeu", mouvements: 7, alertes: 2 },
-  { day: "Ven", mouvements: 12, alertes: 3 },
-  { day: "Sam", mouvements: 18, alertes: 4 },
-  { day: "Dim", mouvements: 14, alertes: 3 },
-]
-
 export function MovementChart({ data, unit, title }: MovementChartProps) {
-  const chartData = data ? data.map(d => ({ day: d.label, value: d.value })) : defaultData
+  const chartData = data.map(d => ({ day: d.label, value: d.value }))
 
   return (
     <div className="rounded-xl border border-border bg-card/60 p-4">
@@ -41,8 +32,7 @@ export function MovementChart({ data, unit, title }: MovementChartProps) {
           </p>
         </div>
         <div className="flex gap-3 text-[11px]">
-          <Legend color="var(--emerald)" label={data ? "Valeur" : "Mouvements"} />
-          {!data && <Legend color="var(--gold)" label="Alertes" />}
+          <Legend color="var(--emerald)" label={unit ?? "Valeur"} />
         </div>
       </div>
       <div className="mt-4 h-44 w-full">
@@ -89,20 +79,11 @@ export function MovementChart({ data, unit, title }: MovementChartProps) {
             />
             <Area
               type="monotone"
-              dataKey={data ? "value" : "mouvements"}
+              dataKey="value"
               stroke="var(--emerald)"
               fill="url(#grEm)"
               strokeWidth={2}
             />
-            {!data && (
-              <Area
-                type="monotone"
-                dataKey="alertes"
-                stroke="var(--gold)"
-                fill="url(#grGd)"
-                strokeWidth={2}
-              />
-            )}
           </AreaChart>
         </ResponsiveContainer>
       </div>

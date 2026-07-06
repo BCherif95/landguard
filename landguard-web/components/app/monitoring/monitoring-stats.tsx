@@ -13,8 +13,8 @@ export function MonitoringStats() {
   const stats = [
     { label: "Anomalies Critiques", value: critical, icon: AlertTriangle, color: "text-red-500", bg: "bg-red-500/10" },
     { label: "Événements à Haut Risque", value: high, icon: Zap, color: "text-orange-500", bg: "bg-orange-500/10" },
-    { label: "Résolus Aujourd'hui", value: resolved, icon: CheckCircle, color: "text-green-500", bg: "bg-green-500/10" },
-    { label: "Moniteurs Actifs", value: 12, icon: Eye, color: "text-primary", bg: "bg-primary/10" },
+    { label: "Résolus", value: resolved, icon: CheckCircle, color: "text-green-500", bg: "bg-green-500/10" },
+    { label: "Événements Reçus", value: evs.length, icon: Eye, color: "text-primary", bg: "bg-primary/10" },
   ]
 
   return (

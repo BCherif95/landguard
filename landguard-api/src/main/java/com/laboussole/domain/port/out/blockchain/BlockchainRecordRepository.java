@@ -9,4 +9,7 @@ public interface BlockchainRecordRepository {
     void save(BlockchainRecord record);
     List<BlockchainRecord> findByEntityId(String entityId);
     Optional<BlockchainRecord> findByHash(String hash);
+
+    /** Most recent anchors first. */
+    List<BlockchainRecord> findMostRecent(int limit);
 }
