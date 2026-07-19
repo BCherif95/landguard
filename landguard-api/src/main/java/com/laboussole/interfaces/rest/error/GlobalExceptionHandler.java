@@ -9,7 +9,10 @@ import com.laboussole.domain.exception.ParcelNotFoundException;
 import com.laboussole.domain.exception.UserDisabledException;
 import com.laboussole.domain.exception.UserNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
@@ -17,11 +20,14 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
 
 import java.util.List;
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(EmailAlreadyRegisteredException.class)
     ResponseEntity<ApiError> emailTaken(EmailAlreadyRegisteredException ex, HttpServletRequest req) {
@@ -98,9 +104,33 @@ class GlobalExceptionHandler {
         return body(HttpStatus.FORBIDDEN, "FORBIDDEN", "Accès refusé.", req);
     }
 
+    /**
+     * SSE connections (e.g. {@code /monitoring/stream}) time out as part of
+     * their normal lifecycle — the browser's EventSource reconnects on its
+     * own, and no JSON body can be written into a {@code text/event-stream}
+     * response. Returning {@code null} marks the exception handled without
+     * touching the response.
+     */
+    @ExceptionHandler(AsyncRequestTimeoutException.class)
+    ResponseEntity<ApiError> asyncTimeout(HttpServletRequest req) {
+        if (isEventStream(req)) {
+            return null;
+        }
+        return body(HttpStatus.SERVICE_UNAVAILABLE, "REQUEST_TIMEOUT", "La requête a expiré.", req);
+    }
+
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiError> unexpected(Exception ex, HttpServletRequest req) {
+        log.error("Unhandled exception on {} {}", req.getMethod(), req.getRequestURI(), ex);
+        if (isEventStream(req)) {
+            return null;
+        }
         return body(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "Erreur interne.", req);
+    }
+
+    private static boolean isEventStream(HttpServletRequest req) {
+        String accept = req.getHeader("Accept");
+        return accept != null && accept.contains(MediaType.TEXT_EVENT_STREAM_VALUE);
     }
 
     private static ResponseEntity<ApiError> body(HttpStatus status, String code, String message, HttpServletRequest req) {
