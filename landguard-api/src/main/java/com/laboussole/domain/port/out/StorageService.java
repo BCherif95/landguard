@@ -13,6 +13,11 @@ public interface StorageService {
     String store(InputStream content, String fileName, String contentType);
 
     /**
+     * Opens a stored file for reading. The caller must close the stream.
+     */
+    InputStream load(String storageKey);
+
+    /**
      * Deletes a file by its storage key.
      */
     void delete(String storageKey);

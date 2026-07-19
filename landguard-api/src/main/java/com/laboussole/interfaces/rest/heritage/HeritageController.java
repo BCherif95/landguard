@@ -70,7 +70,8 @@ public class HeritageController {
                 SuccessionPlanId.of(id),
                 request.fullName(),
                 request.relation(),
-                request.sharePercentage()
+                request.sharePercentage(),
+                request.accountEmail()
         ));
         return SuccessionPlanResponse.from(plan);
     }
@@ -97,10 +98,10 @@ public class HeritageController {
         );
     }
 
-    @Operation(summary = "Anchor a validated succession plan on the blockchain.")
+    @Operation(summary = "Anchor a validated succession plan on the ledger.")
     @PostMapping("/plans/{id}/anchor")
-    public void anchor(@PathVariable UUID id) {
-        anchorUseCase.execute(SuccessionPlanId.of(id));
+    public String anchor(@PathVariable UUID id) {
+        return anchorUseCase.execute(SuccessionPlanId.of(id));
     }
 
     @Operation(summary = "Transfer ownership based on an anchored succession plan.")

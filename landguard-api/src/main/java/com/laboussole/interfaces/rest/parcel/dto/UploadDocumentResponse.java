@@ -7,5 +7,6 @@ public record UploadDocumentResponse(
         UUID id,
         String storageKey,
         String fileName,
+        String sha256Hash,
         Instant uploadedAt) {
 }

@@ -37,6 +37,7 @@ class LandParcelRepositoryAdapter implements LandParcelRepository {
                         d.storageKey(),
                         d.fileName(),
                         d.contentType(),
+                        d.sha256Hash(),
                         d.uploadedAt()))
                 .toList();
 
@@ -126,6 +127,7 @@ class LandParcelRepositoryAdapter implements LandParcelRepository {
                         d.getStorageKey(),
                         d.getFileName(),
                         d.getContentType(),
+                        d.getSha256Hash(),
                         d.getUploadedAt()))
                 .toList();
 

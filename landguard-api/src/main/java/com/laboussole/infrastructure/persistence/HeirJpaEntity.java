@@ -38,4 +38,8 @@ public class HeirJpaEntity {
 
     @Column(nullable = false)
     private boolean validated;
+
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "user_id", length = 36)
+    private UUID userId;
 }

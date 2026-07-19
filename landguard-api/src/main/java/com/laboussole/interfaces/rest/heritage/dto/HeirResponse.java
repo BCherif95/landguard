@@ -9,7 +9,8 @@ public record HeirResponse(
         String fullName,
         String relation,
         int sharePercentage,
-        boolean validated
+        boolean validated,
+        boolean linkedToAccount
 ) {
     public static HeirResponse from(Heir heir) {
         return new HeirResponse(
@@ -17,7 +18,8 @@ public record HeirResponse(
                 heir.fullName(),
                 heir.relation(),
                 heir.sharePercentage(),
-                heir.validated()
+                heir.validated(),
+                heir.linkedUserId() != null
         );
     }
 }

@@ -1,7 +1,10 @@
 package com.laboussole.interfaces.rest.certification;
 
+import com.laboussole.application.service.PdfGenerationService;
 import com.laboussole.application.service.TitleVerificationWorkflowService;
 import com.laboussole.domain.model.certification.CertificationId;
+import com.laboussole.domain.model.certification.VerificationStatus;
+import com.laboussole.infrastructure.notification.AlertNotificationProperties;
 import com.laboussole.domain.model.parcel.ParcelId;
 import com.laboussole.domain.port.out.TitleVerificationRepository;
 import com.laboussole.infrastructure.security.AuthenticatedPrincipal;
@@ -28,6 +31,8 @@ public class TitleVerificationController {
 
     private final TitleVerificationWorkflowService workflowService;
     private final TitleVerificationRepository repository;
+    private final PdfGenerationService pdfService;
+    private final AlertNotificationProperties notificationProperties;
 
     public record OpenCaseRequest(UUID parcelId, String caseReference, LandTitleDto reportedTitle) {}
 
@@ -94,6 +99,27 @@ public class TitleVerificationController {
         return repository.findById(new CertificationId(id))
                 .map(TitleVerificationResponse::fromDomain)
                 .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{id}/certificate")
+    @Operation(summary = "Download the Certificat de Vigilance PDF (CERTIFIED cases only). "
+            + "The embedded QR code resolves to the public verification page.")
+    public ResponseEntity<byte[]> downloadCertificate(@PathVariable UUID id) {
+        return repository.findById(new CertificationId(id))
+                .map(kase -> {
+                    if (kase.status() != VerificationStatus.CERTIFIED) {
+                        return ResponseEntity.status(409).<byte[]>build();
+                    }
+                    var verificationUrl = notificationProperties.frontendBaseUrl()
+                            + "/verifier/" + kase.caseReference();
+                    byte[] pdf = pdfService.generateVigilanceCertificate(kase, verificationUrl);
+                    return ResponseEntity.ok()
+                            .header("Content-Type", "application/pdf")
+                            .header("Content-Disposition", "attachment; filename=Certificat_Vigilance_"
+                                    + kase.caseReference() + ".pdf")
+                            .body(pdf);
+                })
                 .orElse(ResponseEntity.notFound().build());
     }
 }

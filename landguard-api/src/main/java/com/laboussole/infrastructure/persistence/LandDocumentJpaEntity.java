@@ -43,6 +43,9 @@ class LandDocumentJpaEntity {
     @Column(name = "content_type", length = 100)
     private String contentType;
 
+    @Column(name = "sha256_hash", length = 64)
+    private String sha256Hash;
+
     @Column(name = "uploaded_at", nullable = false)
     private Instant uploadedAt;
 }

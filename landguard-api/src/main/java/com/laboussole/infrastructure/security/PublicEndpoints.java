@@ -15,6 +15,8 @@ final class PublicEndpoints {
             "/api/v1/auth/refresh",
             "/api/v1/auth/logout",
             "/api/v1/monitoring/stream",
+            "/api/v1/monitoring/snapshots/image/*",
+            "/api/v1/public/**",
             "/actuator/health",
             "/actuator/info",
             "/v3/api-docs/**",

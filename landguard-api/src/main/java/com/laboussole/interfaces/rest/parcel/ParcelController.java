@@ -140,7 +140,7 @@ class ParcelController {
         return ParcelResponse.from(parcel);
     }
 
-    @Operation(summary = "Download the official Land Title (TF) PDF.")
+    @Operation(summary = "Download the LandGuard registry attestation PDF for the parcel.")
     @GetMapping("/{id}/title-pdf")
     public ResponseEntity<byte[]> downloadTitle(
             @PathVariable("id") String id,
@@ -150,10 +150,11 @@ class ParcelController {
         if (parcel.status() != com.laboussole.domain.model.parcel.ParcelStatus.TITLE_ISSUED) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
-        byte[] pdf = pdfService.generateLandTitle(parcel);
+        byte[] pdf = pdfService.generateRegistryAttestation(parcel);
         return ResponseEntity.ok()
                 .header("Content-Type", "application/pdf")
-                .header("Content-Disposition", "attachment; filename=Titre_Foncier_" + parcel.titleNumber() + ".pdf")
+                .header("Content-Disposition",
+                        "attachment; filename=Attestation_LandGuard_" + parcel.titleNumber() + ".pdf")
                 .body(pdf);
     }
 }

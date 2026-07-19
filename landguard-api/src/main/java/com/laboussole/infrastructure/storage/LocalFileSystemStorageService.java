@@ -55,6 +55,19 @@ public class LocalFileSystemStorageService implements StorageService {
     }
 
     @Override
+    public InputStream load(String storageKey) {
+        try {
+            Path file = rootLocation.resolve(storageKey).normalize().toAbsolutePath();
+            if (!file.getParent().equals(this.rootLocation.toAbsolutePath())) {
+                throw new IllegalArgumentException("Cannot read file outside storage directory.");
+            }
+            return Files.newInputStream(file);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to load file: " + storageKey, e);
+        }
+    }
+
+    @Override
     public void delete(String storageKey) {
         try {
             Path file = rootLocation.resolve(storageKey);

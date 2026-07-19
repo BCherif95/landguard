@@ -53,6 +53,13 @@ management:
       show-details: when-authorized
 
 laboussole:
+  bootstrap:
+    # First-run administrator; created at startup if the e-mail is unknown.
+    # Leave empty to skip. No credentials are ever seeded from migrations.
+    admin:
+      email: ${BOOTSTRAP_ADMIN_EMAIL:}
+      password: ${BOOTSTRAP_ADMIN_PASSWORD:}
+      full-name: ${BOOTSTRAP_ADMIN_FULL_NAME:Administrateur}
   security:
     jwt:
       issuer: laboussole-api

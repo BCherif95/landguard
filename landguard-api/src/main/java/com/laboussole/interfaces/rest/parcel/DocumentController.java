@@ -1,5 +1,6 @@
 package com.laboussole.interfaces.rest.parcel;
 
+import com.laboussole.application.service.Sha256;
 import com.laboussole.domain.model.ocr.OcrExtractionId;
 import com.laboussole.domain.model.parcel.DocumentType;
 import com.laboussole.domain.port.in.ocr.ExtractDocumentDataUseCase;
@@ -58,6 +59,7 @@ public class DocumentController {
                 extraction.id().value(),
                 storageKey,
                 file.getOriginalFilename(),
+                Sha256.hex(documentBytes),
                 Instant.now());
 
         return ResponseEntity.ok(response);

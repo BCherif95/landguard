@@ -60,6 +60,7 @@ public class SuccessionRepositoryAdapter implements SuccessionRepository {
                     hEntity.setRelation(h.relation());
                     hEntity.setSharePercentage(h.sharePercentage());
                     hEntity.setValidated(h.validated());
+                    hEntity.setUserId(h.linkedUserId() != null ? h.linkedUserId().value() : null);
                     return hEntity;
                 }).collect(Collectors.toList()));
         return entity;
@@ -72,7 +73,8 @@ public class SuccessionRepositoryAdapter implements SuccessionRepository {
                         h.getFullName(),
                         h.getRelation(),
                         h.getSharePercentage(),
-                        h.isValidated()
+                        h.isValidated(),
+                        h.getUserId() != null ? new com.laboussole.domain.model.UserId(h.getUserId()) : null
                 )).collect(Collectors.toList());
 
         return new SuccessionPlan(

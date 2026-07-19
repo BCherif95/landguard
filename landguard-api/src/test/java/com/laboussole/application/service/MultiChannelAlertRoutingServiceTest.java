@@ -6,6 +6,10 @@ import com.laboussole.domain.model.Role;
 import com.laboussole.domain.model.User;
 import com.laboussole.domain.model.UserId;
 import com.laboussole.domain.model.UserStatus;
+import com.laboussole.domain.model.heritage.Heir;
+import com.laboussole.domain.model.heritage.SuccessionPlan;
+import com.laboussole.domain.model.heritage.SuccessionPlanId;
+import com.laboussole.domain.model.heritage.SuccessionStatus;
 import com.laboussole.domain.model.monitoring.MonitoringEvent;
 import com.laboussole.domain.model.monitoring.MonitoringEventType;
 import com.laboussole.domain.model.monitoring.MonitoringSeverity;
@@ -22,6 +26,7 @@ import com.laboussole.domain.model.parcel.ParcelStatus;
 import com.laboussole.domain.port.out.AlertNotificationPort;
 import com.laboussole.domain.port.out.LandParcelRepository;
 import com.laboussole.domain.port.out.NotificationPreferencesRepository;
+import com.laboussole.domain.port.out.SuccessionRepository;
 import com.laboussole.domain.port.out.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,9 +41,11 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -52,6 +59,7 @@ class MultiChannelAlertRoutingServiceTest {
     @Mock private LandParcelRepository parcelRepository;
     @Mock private UserRepository userRepository;
     @Mock private NotificationPreferencesRepository preferencesRepository;
+    @Mock private SuccessionRepository successionRepository;
 
     private MultiChannelAlertRoutingService service;
 
@@ -76,6 +84,7 @@ class MultiChannelAlertRoutingServiceTest {
 
         lenient().when(parcelRepository.findById(parcelId)).thenReturn(Optional.of(parcel()));
         lenient().when(userRepository.findById(ownerId)).thenReturn(Optional.of(owner));
+        lenient().when(successionRepository.findByParcelId(parcelId)).thenReturn(Optional.empty());
 
         // Same-thread executor makes parallel dispatch deterministic in tests.
         service = new MultiChannelAlertRoutingService(
@@ -83,6 +92,7 @@ class MultiChannelAlertRoutingServiceTest {
                 parcelRepository,
                 userRepository,
                 preferencesRepository,
+                successionRepository,
                 Runnable::run);
     }
 
@@ -153,6 +163,60 @@ class MultiChannelAlertRoutingServiceTest {
         verify(pushChannel, never()).dispatch(any(), any());
         verify(emailChannel, never()).dispatch(any(), any());
         verify(smsChannel, never()).dispatch(any(), any());
+    }
+
+    @Test
+    void alertsLinkedHeirsAlongsideTheOwner() {
+        var heirId = UserId.generate();
+        var heirUser = User.reconstitute(
+                heirId,
+                Email.of("heritier@example.ml"),
+                "Aminata Traoré",
+                new HashedPassword("$2a$12$abcdefghijklmnopqrstuv"),
+                Role.CITIZEN,
+                UserStatus.ACTIVE,
+                Instant.now(), Instant.now(), null);
+        when(userRepository.findById(heirId)).thenReturn(Optional.of(heirUser));
+        when(successionRepository.findByParcelId(parcelId))
+                .thenReturn(Optional.of(planWithHeirs(
+                        heir("Aminata Traoré", heirId),
+                        heir("Héritier sans compte", null))));
+        when(preferencesRepository.findByUserId(ownerId))
+                .thenReturn(Optional.of(preferences(true, false, false)));
+        when(preferencesRepository.findByUserId(heirId))
+                .thenReturn(Optional.of(NotificationPreferences.reconstitute(
+                        heirId, true, false, false, null, Instant.now())));
+
+        service.route(event(MonitoringSeverity.HIGH)).join();
+
+        verify(pushChannel).dispatch(any(), eq(owner));
+        verify(pushChannel).dispatch(any(), eq(heirUser));
+    }
+
+    @Test
+    void doesNotAlertTheSameUserTwiceWhenOwnerIsAlsoAnHeir() {
+        when(successionRepository.findByParcelId(parcelId))
+                .thenReturn(Optional.of(planWithHeirs(heir("Moussa Traoré", ownerId))));
+        when(preferencesRepository.findByUserId(ownerId))
+                .thenReturn(Optional.of(preferences(true, false, false)));
+
+        service.route(event(MonitoringSeverity.HIGH)).join();
+
+        verify(pushChannel, times(1)).dispatch(any(), eq(owner));
+    }
+
+    private Heir heir(String fullName, UserId linkedUserId) {
+        return Heir.create(fullName, "Enfant", 50, linkedUserId);
+    }
+
+    private SuccessionPlan planWithHeirs(Heir... heirs) {
+        return new SuccessionPlan(
+                SuccessionPlanId.generate(),
+                parcelId,
+                List.of(heirs),
+                SuccessionStatus.VALIDATED,
+                null,
+                Instant.now(), Instant.now());
     }
 
     private NotificationPreferences preferences(boolean push, boolean email, boolean sms) {
