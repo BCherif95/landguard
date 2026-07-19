@@ -1,20 +1,17 @@
 import type { Metadata, Viewport } from "next"
-import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google"
+import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "sonner"
 import { QueryProvider } from "@/lib/providers/query-provider"
 import { AuthBootstrap } from "@/lib/providers/auth-bootstrap"
 import "./globals.css"
 
-const inter = Inter({
+// Single friendly geometric family for the whole product (the Airbnb
+// approach: one face, weights do the hierarchy). Plus Jakarta Sans is the
+// closest open licensed alternative to Airbnb Cereal.
+const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-})
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-space-grotesk",
+  variable: "--font-jakarta",
   display: "swap",
 })
 
@@ -48,7 +45,7 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`${inter.variable} ${spaceGrotesk.variable} ${jetBrainsMono.variable} dark bg-background`}
+      className={`${jakarta.variable} ${jetBrainsMono.variable} dark bg-background`}
       suppressHydrationWarning
     >
       <body className="font-sans antialiased bg-background text-foreground min-h-screen">

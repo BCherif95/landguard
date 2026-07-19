@@ -45,7 +45,7 @@ export default function AuthPage() {
             <motion.h2
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              className="max-w-md font-serif text-4xl font-medium leading-tight tracking-tight"
+              className="max-w-md text-4xl font-medium leading-tight tracking-tight"
             >
               Sécuriser la terre.
               <br />
@@ -84,7 +84,7 @@ export default function AuthPage() {
           </div>
 
           <p className="text-xs uppercase tracking-[0.3em] text-accent">Connexion sécurisée</p>
-          <h1 className="mt-3 font-serif text-3xl font-medium tracking-tight">
+          <h1 className="mt-3 text-3xl font-medium tracking-tight">
             {tab === "login" ? "Accédez à votre espace" : "Créer un compte vérifié"}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
