@@ -77,7 +77,7 @@ export interface Parcel {
 }
 
 export interface LandDocument {
-  type: 'TF' | 'PLAN' | 'ID' | 'CESSION' | 'TAX'
+  type: 'TF' | 'LETTRE_ATTRIBUTION' | 'PERMIS_OCCUPER' | 'ATTESTATION_COUTUMIERE' | 'PLAN' | 'ID' | 'CESSION' | 'TAX'
   label: string
   storageKey: string
   fileName: string

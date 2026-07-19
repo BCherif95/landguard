@@ -8,6 +8,12 @@ package com.laboussole.domain.model.parcel;
 public enum DocumentType {
     /** Titre Foncier — the official land title. */
     TF,
+    /** Lettre d'Attribution issued by a local authority (Mairie). */
+    LETTRE_ATTRIBUTION,
+    /** Permis d'Occuper issued by a local authority. */
+    PERMIS_OCCUPER,
+    /** Attestation de Vente Coutumière signed by the village chief. */
+    ATTESTATION_COUTUMIERE,
     /** Plan de bornage / plan de situation. */
     PLAN,
     /** National identity document (NINA). */

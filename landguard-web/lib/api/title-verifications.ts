@@ -33,6 +33,8 @@ export interface TitleRequisition {
   authenticityConfirmed: boolean
   conflictDetected: boolean
   litigationDetected: boolean
+  mortgageDetected: boolean
+  nameMatchConfirmed: boolean
   rejectionReason: string | null
 }
 

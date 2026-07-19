@@ -15,8 +15,26 @@ export const REGISTRATION_STEPS: RegistrationStep[] = [
   { id: 5, label: 'Confirmation' },
 ];
 
+/**
+ * Malian ownership-title nomenclature (PRD Feature 02.1): the parcel's title
+ * document is one of these four kinds — many parcels outside Bamako hold an
+ * attribution letter or a customary sale attestation rather than a full TF.
+ */
+export const TITLE_DOCUMENT_TYPES = [
+  { type: 'TF', label: 'Titre Foncier' },
+  { type: 'LETTRE_ATTRIBUTION', label: "Lettre d'Attribution" },
+  { type: 'PERMIS_OCCUPER', label: "Permis d'Occuper" },
+  { type: 'ATTESTATION_COUTUMIERE', label: 'Attestation de Vente Coutumière' },
+] as const;
+
+export type TitleDocumentType = (typeof TITLE_DOCUMENT_TYPES)[number]['type'];
+
+export function isTitleDocumentType(type: LandDocument['type']): type is TitleDocumentType {
+  return TITLE_DOCUMENT_TYPES.some((candidate) => candidate.type === type);
+}
+
 export interface LandDocument {
-  type: 'TF' | 'PLAN' | 'ID' | 'CESSION' | 'TAX';
+  type: TitleDocumentType | 'PLAN' | 'ID' | 'CESSION' | 'TAX';
   label: string;
   status: 'PENDING' | 'UPLOADED' | 'VERIFIED';
   fileName?: string;
@@ -46,6 +64,7 @@ interface RegistrationFlowState {
   closeDrawer: () => void;
   updateFormData: (data: Partial<RegistrationFlowState['formData']>) => void;
   updateDocument: (type: LandDocument['type'], data: Partial<LandDocument>) => void;
+  setTitleDocumentType: (type: TitleDocumentType) => void;
   reset: () => void;
 }
 
@@ -80,6 +99,17 @@ export const useRegistrationFlowStore = create<RegistrationFlowState>((set) => (
     formData: {
       ...state.formData,
       documents: state.formData.documents.map(doc => doc.type === type ? { ...doc, ...data } : doc)
+    }
+  })),
+  // Only the still-pending title slot can change kind: once a file is uploaded
+  // the server already recorded its declared type.
+  setTitleDocumentType: (type) => set((state) => ({
+    formData: {
+      ...state.formData,
+      documents: state.formData.documents.map(doc =>
+        isTitleDocumentType(doc.type) && doc.status === 'PENDING'
+          ? { ...doc, type, label: TITLE_DOCUMENT_TYPES.find(t => t.type === type)!.label }
+          : doc)
     }
   })),
   reset: () => set({

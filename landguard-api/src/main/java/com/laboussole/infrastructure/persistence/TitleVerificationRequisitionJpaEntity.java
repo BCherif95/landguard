@@ -32,6 +32,8 @@ public class TitleVerificationRequisitionJpaEntity {
     private boolean authenticityConfirmed;
     private boolean conflictDetected;
     private boolean litigationDetected;
+    private boolean mortgageDetected;
+    private boolean nameMatchConfirmed;
     private String rejectionReason;
 
     public static TitleVerificationRequisitionJpaEntity fromDomain(
@@ -49,6 +51,8 @@ public class TitleVerificationRequisitionJpaEntity {
         entity.setAuthenticityConfirmed(domain.authenticityConfirmed());
         entity.setConflictDetected(domain.conflictDetected());
         entity.setLitigationDetected(domain.litigationDetected());
+        entity.setMortgageDetected(domain.mortgageDetected());
+        entity.setNameMatchConfirmed(domain.nameMatchConfirmed());
         entity.setRejectionReason(domain.rejectionReason());
         return entity;
     }
@@ -64,6 +68,8 @@ public class TitleVerificationRequisitionJpaEntity {
                 authenticityConfirmed,
                 conflictDetected,
                 litigationDetected,
+                mortgageDetected,
+                nameMatchConfirmed,
                 rejectionReason
         );
     }

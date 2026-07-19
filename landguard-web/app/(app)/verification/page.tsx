@@ -526,6 +526,14 @@ function CaseDetail({
                 label="Litige détecté"
                 value={verificationCase.requisition.litigationDetected ? "Oui" : "Non"}
               />
+              <FactRow
+                label="Hypothèque bloquante"
+                value={verificationCase.requisition.mortgageDetected ? "Oui" : "Non"}
+              />
+              <FactRow
+                label="Concordance du nom"
+                value={verificationCase.requisition.nameMatchConfirmed ? "Confirmée" : "Non confirmée"}
+              />
               {verificationCase.requisition.verificationNotes && (
                 <FactRow label="Observations" value={verificationCase.requisition.verificationNotes} />
               )}
@@ -722,10 +730,16 @@ function RequisitionForm({ verificationCase }: { verificationCase: TitleVerifica
     authenticityConfirmed: false,
     conflictDetected: false,
     litigationDetected: false,
+    mortgageDetected: false,
+    nameMatchConfirmed: false,
     rejectionReason: "",
   })
 
-  const needsRejectionReason = !form.authenticityConfirmed && !form.litigationDetected
+  // PRD 02.2: the title is rejected (not disputed) when any mandatory checklist
+  // item fails without a litigation — a written reason is then required.
+  const checklistPassed =
+    form.authenticityConfirmed && !form.mortgageDetected && form.nameMatchConfirmed
+  const needsRejectionReason = !form.litigationDetected && !checklistPassed
   const missing =
     !form.requisitionNumber.trim() ||
     !form.domainOffice.trim() ||
@@ -744,6 +758,8 @@ function RequisitionForm({ verificationCase }: { verificationCase: TitleVerifica
       authenticityConfirmed: form.authenticityConfirmed,
       conflictDetected: form.conflictDetected,
       litigationDetected: form.litigationDetected,
+      mortgageDetected: form.mortgageDetected,
+      nameMatchConfirmed: form.nameMatchConfirmed,
       rejectionReason: form.rejectionReason.trim() || null,
     }
     try {
@@ -803,11 +819,16 @@ function RequisitionForm({ verificationCase }: { verificationCase: TitleVerifica
         />
       </FieldRow>
 
-      <div className="grid gap-2 sm:grid-cols-3">
+      <div className="grid gap-2 sm:grid-cols-2">
         <CheckboxRow
           label="Authenticité confirmée"
           checked={form.authenticityConfirmed}
           onChange={(checked) => setForm((f) => ({ ...f, authenticityConfirmed: checked }))}
+        />
+        <CheckboxRow
+          label="Concordance du nom avec le répertoire national"
+          checked={form.nameMatchConfirmed}
+          onChange={(checked) => setForm((f) => ({ ...f, nameMatchConfirmed: checked }))}
         />
         <CheckboxRow
           label="Conflit détecté"
@@ -818,6 +839,11 @@ function RequisitionForm({ verificationCase }: { verificationCase: TitleVerifica
           label="Litige détecté"
           checked={form.litigationDetected}
           onChange={(checked) => setForm((f) => ({ ...f, litigationDetected: checked }))}
+        />
+        <CheckboxRow
+          label="Hypothèque bloquante détectée"
+          checked={form.mortgageDetected}
+          onChange={(checked) => setForm((f) => ({ ...f, mortgageDetected: checked }))}
         />
       </div>
 

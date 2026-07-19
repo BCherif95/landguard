@@ -64,10 +64,10 @@ public final class TitleVerificationCase {
 
     public void recordRequisition(TitleVerificationRequisition requisition) {
         this.requisition = Objects.requireNonNull(requisition);
-        if (requisition.authenticityConfirmed() && !requisition.litigationDetected()) {
-            transitionTo(VerificationStatus.TF_VERIFIED);
-        } else if (requisition.litigationDetected()) {
+        if (requisition.litigationDetected()) {
             transitionTo(VerificationStatus.DISPUTE_SIGNALED);
+        } else if (requisition.checklistPassed()) {
+            transitionTo(VerificationStatus.TF_VERIFIED);
         } else {
             transitionTo(VerificationStatus.TF_REJECTED);
         }

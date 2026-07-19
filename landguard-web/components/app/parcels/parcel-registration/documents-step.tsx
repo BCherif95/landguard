@@ -1,7 +1,14 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { useRegistrationFlowStore, LandDocument } from "@/lib/store/registration-flow.store"
+import {
+  useRegistrationFlowStore,
+  LandDocument,
+  TITLE_DOCUMENT_TYPES,
+  TitleDocumentType,
+  isTitleDocumentType,
+} from "@/lib/store/registration-flow.store"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { FileText, Upload, CheckCircle2, AlertCircle, X, Loader2, ScanSearch } from "lucide-react"
 import { useState, useRef } from "react"
 import { cn } from "@/lib/utils"
@@ -29,7 +36,7 @@ function applyOcrPrefill(ocr: OcrExtraction) {
 }
 
 export function DocumentsStep() {
-  const { formData, updateDocument, nextStep, prevStep } = useRegistrationFlowStore()
+  const { formData, updateDocument, setTitleDocumentType, nextStep, prevStep } = useRegistrationFlowStore()
   const [uploadingType, setUploadingType] = useState<LandDocument['type'] | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const activeTypeRef = useRef<LandDocument['type'] | null>(null)
@@ -104,7 +111,25 @@ export function DocumentsStep() {
                   <FileText className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">{doc.label}</p>
+                  {isTitleDocumentType(doc.type) && doc.status === 'PENDING' ? (
+                    <Select
+                      value={doc.type}
+                      onValueChange={(value) => setTitleDocumentType(value as TitleDocumentType)}
+                    >
+                      <SelectTrigger className="h-8 w-56 text-sm font-medium" aria-label="Nature du titre de propriété">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TITLE_DOCUMENT_TYPES.map((title) => (
+                          <SelectItem key={title.type} value={title.type}>
+                            {title.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <p className="text-sm font-medium">{doc.label}</p>
+                  )}
                   {doc.fileName ? (
                     <p className="text-[10px] text-emerald font-mono">{doc.fileName}</p>
                   ) : (

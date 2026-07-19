@@ -29,6 +29,8 @@ public record TitleVerificationResponse(
             boolean authenticityConfirmed,
             boolean conflictDetected,
             boolean litigationDetected,
+            boolean mortgageDetected,
+            boolean nameMatchConfirmed,
             String rejectionReason
     ) {
         public static RequisitionDto fromDomain(TitleVerificationRequisition domain) {
@@ -43,6 +45,8 @@ public record TitleVerificationResponse(
                     domain.authenticityConfirmed(),
                     domain.conflictDetected(),
                     domain.litigationDetected(),
+                    domain.mortgageDetected(),
+                    domain.nameMatchConfirmed(),
                     domain.rejectionReason()
             );
         }
@@ -52,6 +56,7 @@ public record TitleVerificationResponse(
                     requisitionNumber, requisitionDate, domainOffice,
                     verifierName, verifierRole, verificationNotes,
                     authenticityConfirmed, conflictDetected, litigationDetected,
+                    mortgageDetected, nameMatchConfirmed,
                     rejectionReason
             );
         }
