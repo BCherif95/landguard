@@ -16,8 +16,12 @@ import java.util.UUID;
 public class LocalFileSystemStorageService implements StorageService {
 
     private final Path rootLocation;
+    private final AesGcmStorageEncryption encryption;
 
-    public LocalFileSystemStorageService(@Value("${laboussole.storage.root:/Users/cherif/Projects/uploads/landguard}") String root) {
+    public LocalFileSystemStorageService(
+            @Value("${laboussole.storage.root:/Users/cherif/Projects/uploads/landguard}") String root,
+            AesGcmStorageEncryption encryption) {
+        this.encryption = encryption;
         this.rootLocation = Paths.get(root);
         try {
             Files.createDirectories(rootLocation);
@@ -47,7 +51,7 @@ public class LocalFileSystemStorageService implements StorageService {
                 throw new RuntimeException("Cannot store file outside current directory.");
             }
             
-            Files.copy(content, destinationFile, StandardCopyOption.REPLACE_EXISTING);
+            Files.copy(encryption.encrypt(content), destinationFile, StandardCopyOption.REPLACE_EXISTING);
             return uniqueName;
         } catch (IOException e) {
             throw new RuntimeException("Failed to store file.", e);
@@ -61,7 +65,7 @@ public class LocalFileSystemStorageService implements StorageService {
             if (!file.getParent().equals(this.rootLocation.toAbsolutePath())) {
                 throw new IllegalArgumentException("Cannot read file outside storage directory.");
             }
-            return Files.newInputStream(file);
+            return encryption.decrypt(Files.newInputStream(file));
         } catch (IOException e) {
             throw new RuntimeException("Failed to load file: " + storageKey, e);
         }

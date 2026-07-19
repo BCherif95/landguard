@@ -48,8 +48,8 @@
 | Exigence PRD | Implémentation | Statut |
 | --- | --- | --- |
 | 2.1 SHA-256 des documents et titres ; scellement, toute modification rompt la chaîne | `Sha256` (empreinte de chaque document), `HashChainLedgerAdapter` (chaîne `hash = SHA-256(précédent ∥ charge)` persistée dans `blockchain_records`) | ✅ |
-| 2.1 Chiffrement au repos AES-256 des titres et plans | Stockage fichier local (`LocalFileSystemStorageService`) **sans chiffrement applicatif** ; à couvrir par chiffrement applicatif ou au niveau du volume/cloud de déploiement | ❌ |
-| 2.1 Flux satellite Sentinel-2 (10 m / 5 jours), flux haute résolution premium | Pipeline d'ingestion réel (`POST /api/v1/monitoring/snapshots` : stockage, comparaison, score, alerte) ; **l'acquisition automatique auprès de l'API Sentinel-2 n'est pas branchée** — l'ingestion est déclenchée par dépôt d'image | 🟡 |
+| 2.1 Chiffrement au repos AES-256 des titres et plans | `AesGcmStorageEncryption` : enveloppe AES-256-GCM (`LGE1 ∥ IV ∥ chiffré+tag`) appliquée par `LocalFileSystemStorageService` à chaque document stocké ; clé base64 en configuration (`STORAGE_ENCRYPTION_KEY`) ; toute altération d'un octet fait échouer la lecture ; fichiers hérités en clair servis tels quels — tests : `AesGcmStorageEncryptionTest` | ✅ |
+| 2.1 Flux satellite Sentinel-2 (10 m / 5 jours), flux haute résolution premium | Acquisition planifiée (`Sentinel2AcquisitionScheduler`, cron quotidien 06:00 UTC) via l'API Process de Copernicus Data Space (OAuth2 + Sentinel-2 L2A, filtre nuages ≤ 20 %, composite « mostRecent » sur 10 jours) ; chaque scène alimente le pipeline d'ingestion standard (comparaison, score, alertes). Inactive sans identifiants Copernicus (`SENTINEL2_CLIENT_ID`/`SECRET`) — le dépôt manuel reste opérationnel. Flux haute résolution premium (Planet/Maxar) : non branché (optionnel PRD) — tests : `BoundingBoxTest`, `Sentinel2ProcessClientTest`, `Sentinel2AcquisitionSchedulerTest` | ✅ |
 | 2.2 Réseau physique (clercs, enquêteurs, géomètres) | Modélisé côté système : réquisition aux Domaines (`TitleVerificationRequisition` avec agent, bureau, rôle), rôles `NOTARY`/`SURVEYOR` | ✅ (part logicielle) |
 
 ## Section 5 — UX/UI
@@ -62,10 +62,9 @@
 
 ## Synthèse des écarts
 
-Les épics 1 à 4 sont couverts à 100 %. Écarts restants, hors backlog métier
-(section 2 du PRD — infrastructure) :
+Les épics 1 à 4 et les exigences techniques de la section 2 sont couverts.
+Reste optionnel (explicitement « intégration optionnelle » dans le PRD) :
 
-| # | Écart | Feature | Action proposée |
+| # | Élément | Feature | Note |
 | --- | --- | --- | --- |
-| 1 | Pas de chiffrement AES-256 au repos des documents | 2.1 | Chiffrer côté `StorageService` (AES-256-GCM, clé gérée en configuration) |
-| 2 | Acquisition Sentinel-2 non automatisée | 2.1 / 03.1 | Connecteur d'acquisition planifiée (hors périmètre du socle actuel ; l'ingestion et l'analyse sont prêtes) |
+| 1 | Flux haute résolution premium (Planet Labs / Maxar) | 2.1 | Financé par les formules premium ; le connecteur Sentinel-2 sert de modèle d'intégration |

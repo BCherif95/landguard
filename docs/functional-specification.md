@@ -87,6 +87,16 @@ d'un titre).
 1. **Ingestion d'imagerie** (`POST /api/v1/monitoring/snapshots`,
    `IngestSatelliteSnapshotService`) — l'image est stockée, comparée au cliché
    précédent de la parcelle par le moteur d'analyse de différence de pixels.
+   Deux sources alimentent ce pipeline unique :
+   - **Acquisition Sentinel-2 planifiée** (`Sentinel2AcquisitionScheduler`) :
+     chaque jour à 06:00 UTC, une scène récente (Sentinel-2 L2A, nuages ≤ 20 %,
+     composite « mostRecent » sur 10 jours) est demandée à l'API Process de
+     Copernicus Data Space pour l'emprise de chaque parcelle (boîte englobante
+     avec marge de contexte), puis injectée dans le pipeline. Le connecteur est
+     inactif tant que les identifiants Copernicus (`SENTINEL2_CLIENT_ID`/`SECRET`)
+     ne sont pas fournis ; les parcelles sont isolées les unes des autres en cas
+     d'échec.
+   - **Dépôt manuel** (agent de terrain, drone) via le même endpoint.
 2. **Analyse structurelle adaptée au Mali** (`PixelDifferenceAnalyzer`) — le score
    est calculé sur la **structure locale en luminance**, pas sur la couleur brute :
    le verdissement de l'hivernage ou l'assèchement de la saison sèche décalent les
@@ -132,6 +142,11 @@ Interface : `/heritage`.
 ### 3.5 Scellement cryptographique
 
 - **Empreintes** : SHA-256 (`Sha256`) sur chaque document déposé.
+- **Chiffrement au repos** (`AesGcmStorageEncryption`) : chaque document stocké
+  est enveloppé en **AES-256-GCM** (`LGE1 ∥ IV aléatoire ∥ chiffré + tag
+  d'authentification`). La clé (256 bits, base64) vient de la configuration
+  (`STORAGE_ENCRYPTION_KEY`) ; toute altération d'un seul octet du fichier fait
+  échouer la lecture. Les fichiers déposés avant activation restent lisibles.
 - **Registre local en chaîne** (`HashChainLedgerAdapter`) : chaque ancrage calcule
   `hash = SHA-256(hash_précédent ∥ charge_utile)` et le persiste dans
   `blockchain_records`. La modification d'un seul enregistrement invalide tous les
@@ -179,3 +194,5 @@ Charte graphique (PRD 5.1) : bleu marine `#0B192C` (confiance), vert émeraude
 | Extraction OCR des entités (TF, nom, superficie) | `ExtractDocumentDataServiceTest`, `OcrTextFieldExtractorTest` |
 | Détection d'anomalies de mise en page documentaire | `OcrLayoutAnalyzerTest` |
 | Envoi SMS Twilio | `TwilioSmsAdapterTest` |
+| Chiffrement AES-256-GCM au repos (aller-retour, IV uniques, détection d'altération, fichiers hérités) | `AesGcmStorageEncryptionTest` |
+| Acquisition Sentinel-2 (emprise, contraintes de la requête Process, isolation des échecs, inactivité sans identifiants) | `BoundingBoxTest`, `Sentinel2ProcessClientTest`, `Sentinel2AcquisitionSchedulerTest` |

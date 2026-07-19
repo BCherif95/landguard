@@ -71,6 +71,29 @@ laboussole:
       refresh-secret: ${JWT_REFRESH_SECRET:ZGV2LW9ubHktcmVmcmVzaC1zZWNyZXQta2V5LWRvLW5vdC11c2UtaW4tcHJvZHVjdGlvbg==}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+  storage:
+    root: ${STORAGE_ROOT:/Users/cherif/Projects/uploads/landguard}
+    encryption:
+      # AES-256 key for documents at rest (PRD 2.1), base64-encoded 32 bytes.
+      # Dev-only default — always override via env outside local development.
+      # Blank value disables encryption (logged loudly at startup).
+      key: ${STORAGE_ENCRYPTION_KEY:41ZfeQFM3H8pmwc84DC6Fr1adlVtxWEZzaW+4mATJiY=}
+  satellite:
+    sentinel2:
+      # Copernicus Data Space credentials (https://dataspace.copernicus.eu).
+      # Blank values disable the scheduled acquisition; manual snapshot upload
+      # via POST /api/v1/monitoring/snapshots keeps working either way.
+      client-id: ${SENTINEL2_CLIENT_ID:}
+      client-secret: ${SENTINEL2_CLIENT_SECRET:}
+      token-url: ${SENTINEL2_TOKEN_URL:https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token}
+      process-url: ${SENTINEL2_PROCESS_URL:https://sh.dataspace.copernicus.eu/api/v1/process}
+      # Daily check at 06:00 UTC; Sentinel-2 revisits Mali about every 5 days.
+      cron: ${SENTINEL2_CRON:0 0 6 * * *}
+      lookback-days: 10
+      max-cloud-coverage: 20
+      image-width-px: 512
+      bbox-padding-ratio: 0.2
+      parcel-batch-limit: 500
   ocr:
     # Directory holding fra.traineddata; empty = Tesseract default (TESSDATA_PREFIX).
     tessdata-path: ${TESSDATA_PATH:}
