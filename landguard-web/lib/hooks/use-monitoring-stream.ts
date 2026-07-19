@@ -16,13 +16,16 @@ export const useMonitoringStream = () => {
   const eventSourceRef = useRef<EventSource | null>(null)
 
   const connect = useCallback(() => {
-    if (!accessToken) return
+    // Always read the freshest token: on reconnect the captured one may have
+    // been rotated by the axios refresh interceptor in the meantime.
+    const token = useAuthStore.getState().accessToken
+    if (!token) return
     if (eventSourceRef.current) {
       eventSourceRef.current.close()
     }
 
     const url = new URL(monitoringApi.getStreamUrl())
-    url.searchParams.append("token", accessToken)
+    url.searchParams.append("token", token)
 
     console.log("[SSE] Connexion au flux de surveillance...")
     const es = new EventSource(url.toString(), { withCredentials: true })
@@ -63,26 +66,24 @@ export const useMonitoringStream = () => {
       console.log("[SSE] Signal d'initialisation reçu")
     })
 
-    es.onerror = (err) => {
-      const state = es.readyState
-      console.error(`[SSE] Erreur de connexion (État: ${state})`, err)
-      
+    es.onerror = () => {
       setIsConnected(false)
       es.close()
-      
-      // If unauthorized (often indicated by immediate closure in some browsers)
-      // or if we reached max attempts, maybe show a warning
-      
+
+      // An interrupted stream (server restart, network blip, keep-alive
+      // timeout) is a normal part of the SSE lifecycle — reconnect with
+      // backoff and log a single informational line.
       const delay = RECONNECT_INTERVALS[Math.min(reconnectAttemptRef.current, RECONNECT_INTERVALS.length - 1)]
-      console.log(`[SSE] Tentative de reconnexion dans ${delay}ms (Essai #${reconnectAttemptRef.current + 1})`)
-      
+      console.warn(`[SSE] Flux de surveillance interrompu — reconnexion dans ${delay / 1000}s (essai #${reconnectAttemptRef.current + 1})`)
+
       reconnectTimeoutRef.current = setTimeout(() => {
         reconnectAttemptRef.current += 1
         connect()
       }, delay)
     }
-  }, [accessToken, addEvent])
+  }, [addEvent])
 
+  // `accessToken` is the trigger: (re)connect on login and token rotation.
   useEffect(() => {
     connect()
 
@@ -94,7 +95,7 @@ export const useMonitoringStream = () => {
         clearTimeout(reconnectTimeoutRef.current)
       }
     }
-  }, [connect])
+  }, [connect, accessToken])
 
   return {
     isConnected
