@@ -20,7 +20,9 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.List;
 
@@ -96,12 +98,33 @@ class GlobalExceptionHandler {
 
     @ExceptionHandler(AuthenticationException.class)
     ResponseEntity<ApiError> unauthenticated(AuthenticationException ex, HttpServletRequest req) {
+        if (isEventStream(req)) {
+            return null;
+        }
         return body(HttpStatus.UNAUTHORIZED, "UNAUTHENTICATED", "Authentification requise.", req);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     ResponseEntity<ApiError> forbidden(AccessDeniedException ex, HttpServletRequest req) {
+        // An SSE reconnect with an expired token lands here: no JSON body can
+        // be written into text/event-stream — the client refreshes and retries.
+        if (isEventStream(req)) {
+            return null;
+        }
         return body(HttpStatus.FORBIDDEN, "FORBIDDEN", "Accès refusé.", req);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    ResponseEntity<ApiError> uploadTooLarge(MaxUploadSizeExceededException ex, HttpServletRequest req) {
+        return body(HttpStatus.PAYLOAD_TOO_LARGE, "UPLOAD_TOO_LARGE",
+                "Le fichier dépasse la taille maximale autorisée (15 Mo).", req);
+    }
+
+    /** The client disconnected mid-response (page reload, closed tab) — nothing to write. */
+    @ExceptionHandler(AsyncRequestNotUsableException.class)
+    ResponseEntity<ApiError> clientDisconnected(AsyncRequestNotUsableException ex, HttpServletRequest req) {
+        log.debug("Client disconnected during async response on {} {}", req.getMethod(), req.getRequestURI());
+        return null;
     }
 
     /**

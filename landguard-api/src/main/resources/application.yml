@@ -20,6 +20,12 @@ spring:
         jdbc:
           time_zone: UTC
         format_sql: false
+  servlet:
+    multipart:
+      # The upload UI allows document scans up to 5 MB; satellite snapshots
+      # can be larger. Kept above both so Tomcat never rejects them at 1 MB.
+      max-file-size: 15MB
+      max-request-size: 20MB
   flyway:
     enabled: true
     baseline-on-migrate: true

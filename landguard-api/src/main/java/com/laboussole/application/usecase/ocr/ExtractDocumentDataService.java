@@ -36,9 +36,12 @@ public class ExtractDocumentDataService implements ExtractDocumentDataUseCase {
             var result = ocrPort.extract(command.documentBytes(), command.documentType());
             extraction = DocumentOcrExtraction.completed(
                     command.storageKey(), command.documentType(), result);
-        } catch (RuntimeException e) {
+        } catch (RuntimeException | LinkageError e) {
             // A broken OCR engine must not block the upload: record the
             // failure so the instructor reviews the document unaided.
+            // LinkageError covers a missing native Tesseract library
+            // (UnsatisfiedLinkError, then NoClassDefFoundError on every
+            // later call once TessAPI failed to initialise).
             log.error("OCR extraction failed for storageKey={} (type={}): {}",
                     command.storageKey(), command.documentType(), e.getMessage(), e);
             extraction = DocumentOcrExtraction.failed(command.storageKey(), command.documentType());
