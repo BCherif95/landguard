@@ -86,7 +86,7 @@ export default function VisionLivePage() {
   if (isLoading) {
     return (
       <AppErrorBoundary name="Tableau de bord">
-        <AppTopbar title="Vision Live" subtitle="Centre de commandement foncier · Temps réel" />
+        <AppTopbar title="Tableau de bord" subtitle="Votre sécurité foncière en un coup d'œil · Temps réel" />
         <div className="flex flex-1 items-center justify-center p-16 text-muted-foreground">
           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
           Chargement de vos parcelles…
@@ -98,7 +98,7 @@ export default function VisionLivePage() {
   if (isError) {
     return (
       <AppErrorBoundary name="Tableau de bord">
-        <AppTopbar title="Vision Live" subtitle="Centre de commandement foncier · Temps réel" />
+        <AppTopbar title="Tableau de bord" subtitle="Votre sécurité foncière en un coup d'œil · Temps réel" />
         <div className="p-4 sm:p-6">
           <ErrorState
             message="Impossible de charger vos parcelles. Vérifiez votre connexion puis réessayez."
@@ -112,7 +112,7 @@ export default function VisionLivePage() {
   if (!parcels || parcels.length === 0) {
     return (
       <AppErrorBoundary name="Tableau de bord">
-        <AppTopbar title="Vision Live" subtitle="Centre de commandement foncier · Temps réel" />
+        <AppTopbar title="Tableau de bord" subtitle="Votre sécurité foncière en un coup d'œil · Temps réel" />
         <div className="p-4 sm:p-6">
           <PremiumEmptyState
             icon={MapPinned}
@@ -132,8 +132,8 @@ export default function VisionLivePage() {
   return (
     <AppErrorBoundary name="Tableau de bord">
       <AppTopbar
-        title="Vision Live"
-        subtitle="Centre de commandement foncier · Temps réel"
+        title="Tableau de bord"
+        subtitle="Votre sécurité foncière en un coup d'œil · Temps réel"
       />
 
       <div className="flex-1 space-y-4 p-4 sm:p-6">

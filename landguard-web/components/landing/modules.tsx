@@ -1,70 +1,55 @@
 import {
   Eye,
   Satellite,
-  FileCheck2,
   Link2,
   Scale,
   Users,
-  Banknote,
-  Smartphone,
+  ShieldCheck,
 } from "lucide-react"
 
+// One card per module of the cahier des charges (épics 1–4 + scellement).
 const modules = [
   {
     icon: Eye,
     name: "Vision Live",
-    tagline: "Centre de commandement",
+    tagline: "Jumeau numérique cadastral",
     description:
-      "Tableau de bord central avec carte satellite, timeline historique, time-lapse et détection IA d'activité suspecte.",
+      "Carte hybride plein écran, conversion des coordonnées UTM de votre plan papier et curseur temporel pour rejouer l'historique visuel du terrain.",
+  },
+  {
+    icon: ShieldCheck,
+    name: "Certification Double Clé",
+    tagline: "Certitude juridique",
+    description:
+      "Dépôt structuré selon la nomenclature malienne, instruction par des experts (réquisition aux Domaines) et Certificat de Vigilance à QR code dynamique.",
   },
   {
     icon: Satellite,
     name: "Surveillance active",
-    tagline: "Monitoring géospatial",
+    tagline: "Alerte intrusion",
     description:
-      "Détection automatisée de constructions, terrassements, engins et occupations illégales avec heatmaps prédictives.",
-  },
-  {
-    icon: FileCheck2,
-    name: "Registre numérique",
-    tagline: "Titres certifiés",
-    description:
-      "Création de terrain, OCR intelligent, signature électronique et certification blockchain — détection des faux documents.",
-  },
-  {
-    icon: Link2,
-    name: "Blockchain",
-    tagline: "Traçabilité immuable",
-    description:
-      "Timeline visuelle de toutes les transactions, transferts et vérifications. Hash unique et certificat numérique par parcelle.",
+      "Analyse des écarts pixels insensible aux saisons, alerte au-delà de 75 % de confiance d'intrusion, notification push, e-mail et SMS simultanés.",
   },
   {
     icon: Scale,
-    name: "Générateur juridique",
+    name: "Dossier de preuve",
     tagline: "Preuves opposables",
     description:
-      "Export PDF avec images satellite horodatées, coordonnées GPS, historique et signatures — bouton « Preuve tribunal ».",
+      "Export PDF officiel : identité certifiée, coordonnées exactes, images satellites avant/après horodatées — prêt à remettre à un huissier à Bamako.",
   },
   {
     icon: Users,
-    name: "Héritage familial",
-    tagline: "Multi-propriété",
+    name: "Conseil de Famille",
+    tagline: "Successions protégées",
     description:
-      "Gestion des héritiers, validation collective, pourcentage de propriété et historique transgénérationnel.",
+      "Héritiers associés au même titre, vote collectif sur le plan de succession, notifications partagées : aucun membre ne peut agir en cachette.",
   },
   {
-    icon: Banknote,
-    name: "Banque & Valorisation",
-    tagline: "Scoring crédit",
+    icon: Link2,
+    name: "Scellement cryptographique",
+    tagline: "Chaîne de validation",
     description:
-      "Estimation, profil foncier certifié, indicateur de solvabilité et risque crédit pour garanties bancaires.",
-  },
-  {
-    icon: Smartphone,
-    name: "Application terrain",
-    tagline: "Mobile-first · Hors ligne",
-    description:
-      "Scan QR, capture photo géolocalisée, notes vocales et assistant IA en français, bambara et wolof.",
+      "Empreinte SHA-256 de chaque document, ancrage en chaîne de hachage : toute modification rompt la chaîne de validation.",
   },
 ]
 

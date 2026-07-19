@@ -7,43 +7,44 @@ import {
   Satellite,
   FolderLock,
   Link2,
-  Scale,
   Users,
-  Banknote,
-  Bell,
-  Settings,
-  LifeBuoy,
   Map,
-  Smartphone,
-  ScanSearch,
+  ClipboardCheck,
   ShieldCheck,
   FileSignature,
   LogOut,
+  type LucideIcon,
 } from "lucide-react"
 import { Logo } from "@/components/brand/logo"
 import { cn } from "@/lib/utils"
 import { useCurrentUser } from "@/lib/hooks/use-current-user"
 import { logoutEverywhere } from "@/lib/store/auth-store"
 
-const primary = [
-  { label: "Vision Live", href: "/dashboard", icon: LayoutDashboard, badge: "LIVE" },
-  { label: "Carte cadastrale", href: "/carte", icon: Map },
-  { label: "Surveillance", href: "/surveillance", icon: Satellite, badge: "3" },
-  { label: "Registre foncier", href: "/registre", icon: FolderLock },
-  { label: "Vérification IA", href: "/verification", icon: ScanSearch },
-  { label: "Blockchain", href: "/blockchain", icon: Link2 },
-  { label: "Certification TF", href: "/certification", icon: ShieldCheck, badge: "NEW" },
-  { label: "Preuves juridiques", href: "/preuves", icon: FileSignature },
-  { label: "Juridique IA", href: "/juridique", icon: Scale },
-  { label: "Héritage", href: "/heritage", icon: Users },
-  { label: "Banque & Valorisation", href: "/banque", icon: Banknote },
-  { label: "App Terrain", href: "/mobile", icon: Smartphone },
-]
+/** Roles allowed into the expert instruction console (PRD Feature 02.2). */
+const EXPERT_ROLES = ["OFFICER", "LEGAL", "ADMIN"]
 
-const secondary = [
-  { label: "Notifications", href: "/notifications", icon: Bell },
-  { label: "Paramètres", href: "/parametres", icon: Settings },
-  { label: "Assistance", href: "/assistance", icon: LifeBuoy },
+interface NavItem {
+  label: string
+  href: string
+  icon: LucideIcon
+  badge?: string
+  expertOnly?: boolean
+}
+
+// One entry per PRD module, using the cahier des charges nomenclature:
+// Épic 1 Vision Live, Épic 2 Certification « Double Clé », Épic 3
+// Surveillance & preuves, Épic 4 Conseil de Famille, plus le scellement
+// cryptographique transverse.
+const primary: NavItem[] = [
+  { label: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Vision Live", href: "/carte", icon: Map, badge: "LIVE" },
+  { label: "Registre foncier", href: "/registre", icon: FolderLock },
+  { label: "Certification Double Clé", href: "/verification", icon: ShieldCheck },
+  { label: "Console d'instruction", href: "/certification", icon: ClipboardCheck, expertOnly: true },
+  { label: "Surveillance & Alertes", href: "/surveillance", icon: Satellite },
+  { label: "Dossier de preuve", href: "/preuves", icon: FileSignature },
+  { label: "Conseil de Famille", href: "/heritage", icon: Users },
+  { label: "Scellement blockchain", href: "/blockchain", icon: Link2 },
 ]
 
 export function AppSidebar() {
@@ -86,7 +87,9 @@ export function AppSidebar() {
           Plateforme
         </div>
         <ul className="space-y-0.5">
-          {primary.map((item) => {
+          {primary
+            .filter((item) => !item.expertOnly || (user?.role && EXPERT_ROLES.includes(user.role)))
+            .map((item) => {
             const active =
               pathname === item.href ||
               (item.href !== "/dashboard" && pathname?.startsWith(item.href))
@@ -115,42 +118,10 @@ export function AppSidebar() {
                   />
                   <span className="flex-1 truncate">{item.label}</span>
                   {item.badge && (
-                    <span
-                      className={cn(
-                        "ml-auto rounded px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.18em]",
-                        item.badge === "LIVE"
-                          ? "bg-emerald/15 text-emerald"
-                          : "bg-danger/15 text-danger",
-                      )}
-                    >
+                    <span className="ml-auto rounded bg-emerald/15 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.18em] text-emerald">
                       {item.badge}
                     </span>
                   )}
-                </Link>
-              </li>
-            )
-          })}
-        </ul>
-
-        <div className="mt-6 px-2 pb-2 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-          Compte
-        </div>
-        <ul className="space-y-0.5">
-          {secondary.map((item) => {
-            const active = pathname?.startsWith(item.href)
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors",
-                    active
-                      ? "bg-secondary text-foreground"
-                      : "text-muted-foreground hover:bg-secondary hover:text-foreground",
-                  )}
-                >
-                  <item.icon className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{item.label}</span>
                 </Link>
               </li>
             )
