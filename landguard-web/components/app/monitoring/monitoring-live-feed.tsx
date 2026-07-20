@@ -8,8 +8,8 @@ export function MonitoringLiveFeed() {
   const { events, selectedEventId, setSelectedEvent } = useMonitoringStore()
 
   return (
-    <div className="flex flex-col h-full bg-background/40 backdrop-blur-xl border rounded-xl overflow-hidden shadow-2xl">
-      <div className="p-4 border-b flex items-center justify-between bg-card/30">
+    <div className="flex flex-col h-full bg-card border border-border rounded-xl overflow-hidden shadow-card">
+      <div className="p-4 border-b border-border flex items-center justify-between bg-secondary">
         <div className="flex items-center gap-2">
           <div className="relative">
             <Radio className="w-5 h-5 text-primary animate-pulse" />
@@ -45,7 +45,7 @@ export function MonitoringLiveFeed() {
         </div>
       </ScrollArea>
       
-      <div className="p-3 border-t bg-card/20 text-center">
+      <div className="p-3 border-t border-border bg-secondary text-center">
         <span className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-mono">
           Système : Surveillance LandGuard V3 Active
         </span>

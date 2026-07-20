@@ -65,7 +65,7 @@ export default function HeritagePage() {
               <Landmark className="h-4 w-4" />
               Cadre Juridique
             </Button>
-            <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700">
+            <Button className="gap-2">
               <Plus className="h-4 w-4" />
               Nouveau Plan de Succession
             </Button>
@@ -104,7 +104,7 @@ export default function HeritagePage() {
                           key={plan.id}
                           onClick={() => setSelectedPlanId(plan.id)}
                           className={`w-full text-left p-4 transition-colors hover:bg-muted/50 ${
-                            isSelected ? "bg-indigo-500/5 border-l-4 border-l-indigo-500" : ""
+                            isSelected ? "bg-emerald-soft border-l-4 border-l-emerald" : ""
                           }`}
                         >
                           <div className="flex items-start justify-between mb-1">
@@ -144,8 +144,8 @@ export default function HeritagePage() {
             {selectedPlan ? (
               <div className="space-y-6">
                 {/* Header Card */}
-                <Card className="overflow-hidden border-indigo-500/10">
-                  <div className="h-2 bg-indigo-500" />
+                <Card className="overflow-hidden border-emerald/15">
+                  <div className="h-2 bg-emerald" />
                   <CardHeader className="flex flex-row items-start justify-between space-y-0">
                     <div>
                       <CardTitle className="text-2xl">{selectedParcel?.name}</CardTitle>
@@ -178,7 +178,7 @@ export default function HeritagePage() {
                     <Card>
                       <CardHeader>
                         <CardTitle className="text-base flex items-center gap-2">
-                          <Users className="h-4 w-4 text-indigo-500" />
+                          <Users className="h-4 w-4 text-emerald" />
                           Approbations des Héritiers
                         </CardTitle>
                       </CardHeader>
@@ -211,7 +211,7 @@ export default function HeritagePage() {
                         <Card>
                           <CardHeader>
                             <CardTitle className="text-base flex items-center gap-2">
-                              <History className="h-4 w-4 text-indigo-500" />
+                              <History className="h-4 w-4 text-emerald" />
                               Piste d&apos;Audit de la Succession
                             </CardTitle>
                           </CardHeader>
@@ -224,7 +224,7 @@ export default function HeritagePage() {
                         <Card>
                           <CardHeader>
                             <CardTitle className="text-base flex items-center gap-2">
-                              <FileCheck className="h-4 w-4 text-indigo-500" />
+                              <FileCheck className="h-4 w-4 text-emerald" />
                               Documentation Juridique
                             </CardTitle>
                           </CardHeader>
@@ -267,8 +267,8 @@ export default function HeritagePage() {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center space-y-4 rounded-xl border-2 border-dashed border-muted bg-muted/5">
-                <div className="rounded-full bg-indigo-500/10 p-6">
-                  <Users className="h-12 w-12 text-indigo-500" />
+                <div className="rounded-full bg-emerald-soft p-6">
+                  <Users className="h-12 w-12 text-emerald" />
                 </div>
                 <div>
                   <h3 className="text-xl font-bold">Sélectionnez un plan de succession</h3>

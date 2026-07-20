@@ -41,7 +41,7 @@ export default function SurveillancePage() {
         subtitle={isConnected ? "CONNECTÉ · Renseignement satellite en temps réel actif" : "CONNEXION · Initialisation des liaisons orbitales..."}
       />
       
-      <div className="flex-1 p-4 lg:p-6 space-y-6 bg-[#050505] text-white overflow-hidden flex flex-col">
+      <div className="flex-1 p-4 lg:p-6 space-y-6 bg-background overflow-hidden flex flex-col">
         {/* Global Monitoring Header */}
         <MonitoringStats />
 
@@ -60,9 +60,9 @@ export default function SurveillancePage() {
 
             {/* Selected Alert Detailed Intel */}
             {selectedEvent && (
-              <Card className="p-6 bg-black/60 backdrop-blur-2xl border-primary/20 animate-in fade-in slide-in-from-bottom-4">
+              <Card className="p-6 bg-card border-border shadow-card animate-in fade-in slide-in-from-bottom-4">
                 <div className="flex flex-col md:flex-row gap-6">
-                  <div className="w-full md:w-48 h-32 rounded-lg overflow-hidden border border-white/10 bg-muted relative group">
+                  <div className="w-full md:w-48 h-32 rounded-lg overflow-hidden border border-border bg-navy relative group">
                     <img 
                       src={selectedEvent.imageUrl || ""} 
                       alt="Capture satellite" 
@@ -91,7 +91,7 @@ export default function SurveillancePage() {
                       </div>
                     </div>
                     
-                    <p className="text-sm leading-relaxed text-slate-300 border-l-2 border-primary/50 pl-4">
+                    <p className="text-sm leading-relaxed text-muted-foreground border-l-2 border-primary/50 pl-4">
                       {selectedEvent.description}
                     </p>
                     

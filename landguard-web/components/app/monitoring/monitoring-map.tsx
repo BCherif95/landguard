@@ -15,13 +15,28 @@ import { AppErrorBoundary } from "@/components/app/error-boundary"
 // Custom controller to handle flyTo/setView
 function MapFlyController({ center }: { center: [number, number] | null }) {
   const map = useMap()
-  
+
   useEffect(() => {
-    if (center && !isNaN(center[0]) && !isNaN(center[1])) {
-      map.flyTo(center, 16, {
-        duration: 1.5,
-        easeLinearity: 0.25
-      })
+    if (!center || isNaN(center[0]) || isNaN(center[1])) return
+
+    let cancelled = false
+    const frame = requestAnimationFrame(() => {
+      if (cancelled) return
+      try {
+        map.flyTo(center, 16, { duration: 1.5, easeLinearity: 0.25 })
+      } catch {
+        /* map torn down mid-flight — ignore */
+      }
+    })
+
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(frame)
+      try {
+        map.stop()
+      } catch {
+        /* already removed */
+      }
     }
   }, [center, map])
 

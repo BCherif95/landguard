@@ -66,6 +66,12 @@ laboussole:
       email: ${BOOTSTRAP_ADMIN_EMAIL:}
       password: ${BOOTSTRAP_ADMIN_PASSWORD:}
       full-name: ${BOOTSTRAP_ADMIN_FULL_NAME:Administrateur}
+    # DEV PROFILE ONLY: seeds one demo account per role on startup
+    # (admin@ / officer@ / legal@ / banker@ / citizen@ laboussole.ml).
+    # Never active outside the `dev` profile. Idempotent.
+    dev-users:
+      enabled: ${BOOTSTRAP_DEV_USERS_ENABLED:true}
+      password: ${BOOTSTRAP_DEV_USERS_PASSWORD:Boussole2026!}
   security:
     jwt:
       issuer: laboussole-api

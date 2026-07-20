@@ -31,26 +31,31 @@ export function KpiCard({
   const TrendIcon = trend === "down" ? TrendingDown : TrendingUp
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-border bg-card/60 p-4">
+    <div className="group relative overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-card transition-all duration-300 hover:-translate-y-0.5 hover:shadow-card-md">
+      <span
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-0.5 opacity-70"
+        style={{ background: `linear-gradient(90deg, ${color}, transparent)` }}
+      />
       <div className="flex items-center justify-between">
         <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
           {label}
         </span>
         {Icon && (
           <div
-            className="flex h-7 w-7 items-center justify-center rounded-md border border-border"
+            className="flex h-9 w-9 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-105"
             style={{
-              background: `color-mix(in oklab, ${color} 14%, transparent)`,
+              background: `color-mix(in oklab, ${color} 12%, transparent)`,
               color,
             }}
           >
-            <Icon className="h-3.5 w-3.5" />
+            <Icon className="h-4 w-4" />
           </div>
         )}
       </div>
       <div className="mt-3 flex items-end justify-between gap-3">
         <div>
-          <div className="font-display text-3xl font-medium tracking-tight text-foreground">
+          <div className="font-display text-3xl font-semibold tracking-tight text-foreground tabular-nums">
             {value}
           </div>
           {delta && (

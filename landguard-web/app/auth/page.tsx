@@ -40,7 +40,7 @@ export default function AuthPage() {
           }}
         />
         <div className="relative z-10 flex h-full flex-col p-12 text-white">
-          <Logo />
+          <Logo inverted />
           <div className="flex flex-1 flex-col justify-center">
             <motion.h2
               initial={{ opacity: 0, y: 12 }}
@@ -83,7 +83,7 @@ export default function AuthPage() {
             <div className="my-8 h-px bg-border" />
           </div>
 
-          <p className="text-xs uppercase tracking-[0.3em] text-accent">Connexion sécurisée</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-emerald">Connexion sécurisée</p>
           <h1 className="mt-3 text-3xl font-medium tracking-tight">
             {tab === "login" ? "Accédez à votre espace" : "Créer un compte vérifié"}
           </h1>
@@ -121,7 +121,7 @@ export default function AuthPage() {
                 disabled
                 className="group flex w-full items-center gap-4 rounded-xl border border-border/60 bg-card/40 p-4 text-left opacity-60"
               >
-                <div className="flex size-10 items-center justify-center rounded-xl bg-accent/10 text-accent">
+                <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-soft text-emerald">
                   <m.icon className="size-5" />
                 </div>
                 <div className="flex-1">

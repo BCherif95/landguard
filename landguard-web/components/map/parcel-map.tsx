@@ -91,13 +91,31 @@ function MapController({
   }, [map, onMapReady])
 
   useEffect(() => {
-    if (selectedParcel?.centroid) {
-      const lat = selectedParcel.centroid.latitude
-      const lng = selectedParcel.centroid.longitude
-      if (typeof lat === 'number' && typeof lng === 'number' && !isNaN(lat) && !isNaN(lng)) {
-        map.flyTo([lat, lng], Math.max(map.getZoom(), 15), {
-          duration: 1.5
-        })
+    const lat = selectedParcel?.centroid?.latitude
+    const lng = selectedParcel?.centroid?.longitude
+    if (typeof lat !== "number" || typeof lng !== "number" || isNaN(lat) || isNaN(lng)) return
+
+    // Defer to the next frame so the map is laid out, and guard against the
+    // StrictMode/unmount race where the container is already gone.
+    let cancelled = false
+    const frame = requestAnimationFrame(() => {
+      if (cancelled) return
+      try {
+        map.flyTo([lat, lng], Math.max(map.getZoom(), 15), { duration: 1.5 })
+      } catch {
+        /* map torn down mid-flight — ignore */
+      }
+    })
+
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(frame)
+      // Halt any in-flight pan/zoom before Leaflet removes the map, otherwise
+      // its animation loop dereferences a detached element (_leaflet_pos).
+      try {
+        map.stop()
+      } catch {
+        /* already removed */
       }
     }
   }, [selectedParcel, map])

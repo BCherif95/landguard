@@ -17,7 +17,7 @@ export function HeirVotingPanel({ heirs, onVote, disabled }: HeirVotingPanelProp
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold flex items-center gap-2">
-          <Scale className="h-4 w-4 text-indigo-500" />
+          <Scale className="h-4 w-4 text-emerald" />
           Statut d&apos;Approbation des Héritiers
         </h3>
         <span className="text-xs text-muted-foreground">

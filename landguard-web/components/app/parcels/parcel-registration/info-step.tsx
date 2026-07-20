@@ -104,7 +104,7 @@ export function InfoStep() {
                                 <Input
                                     placeholder="Ex: Lotissement N'Tabakoro"
                                     {...field}
-                                    className="bg-white/5 border-white/10 h-11"
+                                    className="h-11"
                                 />
                             </FormControl>
                             <FormMessage/>
@@ -123,7 +123,7 @@ export function InfoStep() {
                                 <Input
                                     placeholder="Ex: Kati, Commune de Kalabancoro"
                                     {...field}
-                                    className="bg-white/5 border-white/10 h-11"
+                                    className="h-11"
                                 />
                             </FormControl>
                             <FormMessage/>
@@ -142,7 +142,7 @@ export function InfoStep() {
                                 <Input
                                     placeholder="Ex: Famille Traoré"
                                     {...field}
-                                    className="bg-white/5 border-white/10 h-11"
+                                    className="h-11"
                                 />
                             </FormControl>
                             <FormMessage/>
@@ -182,7 +182,7 @@ export function InfoStep() {
                                     <Input
                                         type="number"
                                         {...field}
-                                        className="bg-white/5 border-white/10 h-11 font-mono text-emerald"
+                                        className="h-11 font-mono text-emerald"
                                     />
                                 </FormControl>
                                 <FormMessage/>
@@ -192,10 +192,11 @@ export function InfoStep() {
                 </div>
                 <Button
                     type="submit"
-                    className="w-full bg-white text-black hover:bg-zinc-200 h-11 font-bold uppercase tracking-widest mt-6"
+                    size="lg"
+                    className="mt-6 w-full font-semibold uppercase tracking-widest"
                     disabled={!form.formState.isValid}
                 >
-                    Étape Suivante
+                    Étape suivante
                 </Button>
             </form>
         </Form>

@@ -40,8 +40,26 @@ function MapEvents({ onMapClick }: { onMapClick: (lat: number, lng: number) => v
 function MapFocus({ points, version }: { points: [number, number][]; version: number }) {
   const map = useMap()
   useEffect(() => {
-    if (version > 0 && points.length >= 3) {
-      map.fitBounds(L.latLngBounds(points), { padding: [40, 40] })
+    if (version <= 0 || points.length < 3) return
+
+    let cancelled = false
+    const frame = requestAnimationFrame(() => {
+      if (cancelled) return
+      try {
+        map.fitBounds(L.latLngBounds(points), { padding: [40, 40] })
+      } catch {
+        /* map torn down mid-flight — ignore */
+      }
+    })
+
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(frame)
+      try {
+        map.stop()
+      } catch {
+        /* already removed */
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [version])
@@ -181,19 +199,19 @@ export function GeoStep() {
     <div className="space-y-6 py-4">
       <div className="space-y-4">
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
-          <TabsList className="grid grid-cols-3 w-full bg-white/5 border border-white/10 p-1 mb-4 h-12 rounded-xl">
-            <TabsTrigger value="input" className="rounded-lg gap-2 text-xs font-bold uppercase tracking-widest data-[state=active]:bg-emerald data-[state=active]:text-white">
+          <TabsList className="grid grid-cols-3 w-full bg-secondary border border-border p-1 mb-4 h-12 rounded-xl">
+            <TabsTrigger value="input" className="rounded-lg gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Type className="h-4 w-4" /> Saisie Simple
             </TabsTrigger>
-            <TabsTrigger value="draw" className="rounded-lg gap-2 text-xs font-bold uppercase tracking-widest data-[state=active]:bg-emerald data-[state=active]:text-white">
+            <TabsTrigger value="draw" className="rounded-lg gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <MousePointer2 className="h-4 w-4" /> Dessin Manuel
             </TabsTrigger>
-            <TabsTrigger value="utm" className="rounded-lg gap-2 text-xs font-bold uppercase tracking-widest data-[state=active]:bg-emerald data-[state=active]:text-white">
+            <TabsTrigger value="utm" className="rounded-lg gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Compass className="h-4 w-4" /> UTM
             </TabsTrigger>
           </TabsList>
 
-          <div className="relative rounded-2xl border border-white/10 bg-zinc-950 overflow-hidden h-[400px] mb-4 shadow-2xl group">
+          <div className="relative rounded-2xl border border-border bg-carbon overflow-hidden h-[400px] mb-4 shadow-card-md group">
             <MapContainer
               center={[12.6392, -7.9892]}
               zoom={13}
@@ -266,16 +284,16 @@ export function GeoStep() {
           </div>
 
           <TabsContent value="input" className="mt-0 space-y-4">
-            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3 shadow-inner">
-              <div className="flex items-center gap-2 text-zinc-400">
+            <div className="p-4 rounded-2xl bg-secondary border border-border space-y-3">
+              <div className="flex items-center gap-2 text-muted-foreground">
                 <Info className="h-4 w-4 text-emerald" />
                 <p className="text-[11px] font-medium leading-relaxed">
                   Copiez vos coordonnées depuis votre appareil GPS (un point par ligne).
                 </p>
               </div>
-              <Textarea 
+              <Textarea
                 placeholder={"12.6392, -7.9892\n12.6402, -7.9882\n12.6392, -7.9872..."}
-                className="min-h-[120px] bg-black/40 border-white/10 font-mono text-xs text-emerald placeholder:text-zinc-700 focus:border-emerald/50 transition-colors"
+                className="min-h-[120px] bg-card border-border font-mono text-xs text-emerald placeholder:text-muted-foreground/50 focus:border-emerald/50 transition-colors"
                 value={coordText}
                 onChange={(e) => {
                   setCoordText(e.target.value)
@@ -284,7 +302,7 @@ export function GeoStep() {
                 }}
               />
               {!parsedGeometry && coordText.length > 0 && (
-                <div className="flex items-center gap-2 text-orange-500 bg-orange-500/5 p-2 rounded-lg border border-orange-500/20">
+                <div className="flex items-center gap-2 text-amber-600 bg-amber-50 p-2 rounded-lg border border-amber-200">
                   <AlertCircle className="h-3 w-3" />
                   <span className="text-[9px] font-bold uppercase tracking-wider">Format invalide (min. 3 points requis)</span>
                 </div>
@@ -293,8 +311,8 @@ export function GeoStep() {
           </TabsContent>
 
           <TabsContent value="utm" className="mt-0 space-y-4">
-            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-4 shadow-inner">
-              <div className="flex items-center gap-2 text-zinc-400">
+            <div className="p-4 rounded-2xl bg-secondary border border-border space-y-4">
+              <div className="flex items-center gap-2 text-muted-foreground">
                 <Info className="h-4 w-4 text-emerald" />
                 <p className="text-[11px] font-medium leading-relaxed">
                   Saisissez les coordonnées UTM de votre plan de situation, un sommet par ligne (zones 29N et 30N du territoire malien).
@@ -302,7 +320,7 @@ export function GeoStep() {
               </div>
 
               <div className="space-y-2">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Zone UTM</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Zone UTM</span>
                 <div className="grid grid-cols-2 gap-2">
                   {(["29N", "30N"] as const).map((zone) => (
                     <Button
@@ -314,8 +332,8 @@ export function GeoStep() {
                       className={cn(
                         "h-10 rounded-lg border text-xs font-bold uppercase tracking-widest transition-colors",
                         utmZone === zone
-                          ? "bg-emerald text-black border-emerald hover:bg-emerald/90 hover:text-black"
-                          : "bg-black/40 text-zinc-400 border-white/10 hover:text-white",
+                          ? "bg-primary text-primary-foreground border-primary hover:bg-primary/90 hover:text-primary-foreground"
+                          : "bg-card text-muted-foreground border-border hover:text-foreground",
                       )}
                     >
                       Zone {zone}
@@ -326,8 +344,8 @@ export function GeoStep() {
 
               <div className="space-y-2">
                 <div className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Coordonnée Est (Easting)</span>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Coordonnée Nord (Northing)</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Coordonnée Est (Easting)</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Coordonnée Nord (Northing)</span>
                   <span className="w-9" />
                 </div>
                 {utmRows.map((row, index) => (
@@ -338,7 +356,7 @@ export function GeoStep() {
                       aria-label={`Coordonnée Est (Easting) du sommet ${index + 1}`}
                       value={row.easting}
                       onChange={(e) => updateUtmRow(index, "easting", e.target.value)}
-                      className="bg-black/40 border-white/10 font-mono text-xs text-emerald placeholder:text-zinc-700 focus:border-emerald/50"
+                      className="bg-card border-border font-mono text-xs text-emerald placeholder:text-muted-foreground/50 focus:border-emerald/50"
                     />
                     <Input
                       inputMode="decimal"
@@ -346,7 +364,7 @@ export function GeoStep() {
                       aria-label={`Coordonnée Nord (Northing) du sommet ${index + 1}`}
                       value={row.northing}
                       onChange={(e) => updateUtmRow(index, "northing", e.target.value)}
-                      className="bg-black/40 border-white/10 font-mono text-xs text-emerald placeholder:text-zinc-700 focus:border-emerald/50"
+                      className="bg-card border-border font-mono text-xs text-emerald placeholder:text-muted-foreground/50 focus:border-emerald/50"
                     />
                     <Button
                       size="icon"
@@ -354,7 +372,7 @@ export function GeoStep() {
                       aria-label="Supprimer ce sommet"
                       onClick={() => removeUtmRow(index)}
                       disabled={utmRows.length <= 3}
-                      className="text-zinc-500 hover:text-red-400 disabled:opacity-30"
+                      className="text-muted-foreground hover:text-destructive disabled:opacity-30"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -363,14 +381,14 @@ export function GeoStep() {
                 <Button
                   variant="ghost"
                   onClick={addUtmRow}
-                  className="w-full h-9 border border-dashed border-white/10 text-zinc-400 hover:text-white text-[10px] font-bold uppercase tracking-widest gap-2"
+                  className="w-full h-9 border border-dashed border-border text-muted-foreground hover:text-foreground hover:bg-card text-[10px] font-bold uppercase tracking-widest gap-2"
                 >
                   <Plus className="h-3 w-3" /> Ajouter un sommet
                 </Button>
               </div>
 
               {hasPartialUtmRow && (
-                <div className="flex items-center gap-2 text-orange-500 bg-orange-500/5 p-2 rounded-lg border border-orange-500/20">
+                <div className="flex items-center gap-2 text-amber-600 bg-amber-50 p-2 rounded-lg border border-amber-200">
                   <AlertCircle className="h-3 w-3" />
                   <span className="text-[9px] font-bold uppercase tracking-wider">Chaque sommet requiert une coordonnée Est et une coordonnée Nord.</span>
                 </div>
@@ -379,7 +397,7 @@ export function GeoStep() {
               <Button
                 disabled={!canConvertUtm}
                 onClick={handleUtmConvert}
-                className="w-full h-11 bg-emerald/15 text-emerald border border-emerald/40 hover:bg-emerald/25 font-bold uppercase tracking-widest text-[10px] gap-2 transition-all active:scale-[0.98]"
+                className="w-full h-11 bg-emerald-soft text-emerald border border-emerald/40 hover:bg-emerald/15 font-bold uppercase tracking-widest text-[10px] gap-2 transition-all active:scale-[0.98]"
               >
                 {isConvertingUtm ? (
                   <>
@@ -397,13 +415,13 @@ export function GeoStep() {
           </TabsContent>
 
           <TabsContent value="draw" className="mt-0">
-            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-center">
-              <div className="flex items-center justify-center gap-4 text-xs font-mono text-zinc-400">
+            <div className="p-4 rounded-2xl bg-secondary border border-border text-center">
+              <div className="flex items-center justify-center gap-4 text-xs font-mono text-muted-foreground">
                 <div className="flex flex-col items-center gap-1">
                   <span className="text-emerald font-black text-lg">{drawnPoints.length}</span>
                   <span className="uppercase text-[8px] tracking-[0.2em]">Sommets</span>
                 </div>
-                <div className="h-8 w-px bg-white/10" />
+                <div className="h-8 w-px bg-border" />
                 <p className="text-left text-[10px] leading-relaxed max-w-[200px]">
                   {drawnPoints.length < 3 
                     ? `Ajoutez encore ${3 - drawnPoints.length} point(s) pour former un périmètre.`
@@ -415,10 +433,10 @@ export function GeoStep() {
         </Tabs>
 
         <div className="grid gap-3">
-          <Button 
+          <Button
             disabled={!parsedGeometry}
             onClick={confirmDrawing}
-            className="w-full flex items-center justify-center gap-3 h-14 bg-emerald text-black hover:bg-emerald/90 font-bold uppercase tracking-widest text-xs shadow-[0_0_25px_rgba(16,185,129,0.3)] transition-all active:scale-[0.98]"
+            className="w-full flex items-center justify-center gap-3 h-14 bg-primary text-primary-foreground hover:bg-primary/90 font-bold uppercase tracking-widest text-xs shadow-md transition-all active:scale-[0.98]"
           >
             {parsedGeometry ? (
               <>
@@ -433,10 +451,10 @@ export function GeoStep() {
             )}
           </Button>
           
-          <Button 
-            variant="ghost" 
-            onClick={prevStep} 
-            className="w-full text-zinc-500 h-10 hover:text-white"
+          <Button
+            variant="ghost"
+            onClick={prevStep}
+            className="w-full text-muted-foreground h-10 hover:text-foreground"
           >
             Retour aux informations
           </Button>

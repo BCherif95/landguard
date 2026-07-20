@@ -14,12 +14,15 @@ export const useMonitoringStream = () => {
   const reconnectAttemptRef = useRef(0)
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
+  // Set on unmount so a late error from a torn-down stream never reconnects.
+  const stoppedRef = useRef(false)
 
   const connect = useCallback(() => {
     // Always read the freshest token: on reconnect the captured one may have
     // been rotated by the axios refresh interceptor in the meantime.
     const token = useAuthStore.getState().accessToken
     if (!token) return
+    stoppedRef.current = false
     if (eventSourceRef.current) {
       eventSourceRef.current.close()
     }
@@ -67,6 +70,14 @@ export const useMonitoringStream = () => {
     })
 
     es.onerror = () => {
+      // Ignore errors from a stream we already tore down or replaced. In dev
+      // (StrictMode double-mount) and on token rotation, an old EventSource can
+      // fire onerror after being superseded — reconnecting on it would churn.
+      if (stoppedRef.current || eventSourceRef.current !== es) {
+        es.close()
+        return
+      }
+
       setIsConnected(false)
       es.close()
 
@@ -74,7 +85,7 @@ export const useMonitoringStream = () => {
       // timeout) is a normal part of the SSE lifecycle — reconnect with
       // backoff and log a single informational line.
       const delay = RECONNECT_INTERVALS[Math.min(reconnectAttemptRef.current, RECONNECT_INTERVALS.length - 1)]
-      console.warn(`[SSE] Flux de surveillance interrompu — reconnexion dans ${delay / 1000}s (essai #${reconnectAttemptRef.current + 1})`)
+      console.info(`[SSE] Flux de surveillance interrompu — reconnexion dans ${delay / 1000}s (essai #${reconnectAttemptRef.current + 1})`)
 
       reconnectTimeoutRef.current = setTimeout(() => {
         reconnectAttemptRef.current += 1
@@ -88,11 +99,14 @@ export const useMonitoringStream = () => {
     connect()
 
     return () => {
+      stoppedRef.current = true
       if (eventSourceRef.current) {
         eventSourceRef.current.close()
+        eventSourceRef.current = null
       }
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current)
+        reconnectTimeoutRef.current = null
       }
     }
   }, [connect, accessToken])

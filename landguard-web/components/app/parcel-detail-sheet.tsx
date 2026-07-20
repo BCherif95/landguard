@@ -5,6 +5,7 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
+  SheetDescription,
 } from "@/components/ui/sheet"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useQuery } from "@tanstack/react-query"
@@ -22,6 +23,7 @@ import {
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useTransitionStatus, useIssueTitle } from "@/lib/hooks/use-parcels"
+import { useCurrentUser } from "@/lib/hooks/use-current-user"
 import { parcelsApi } from "@/lib/api/parcels"
 import { heritageApi } from "@/lib/api/heritage"
 import { toast } from "sonner"
@@ -37,10 +39,15 @@ const SUCCESSION_STATUS_LABEL: Record<string, string> = {
   REJECTED: "Rejeté",
 }
 
+/** Roles allowed to drive the government certification workflow (PRD Feature 02.2). */
+const WORKFLOW_ROLES = ["OFFICER", "LEGAL", "ADMIN"]
+
 export function ParcelDetailSheet() {
   const { parcel, isLoading, isOpen, close, activeTab, setTab } = useParcelDetails()
   const { mutateAsync: transition } = useTransitionStatus()
   const { mutateAsync: issueTitle } = useIssueTitle()
+  const currentUser = useCurrentUser()
+  const canManageWorkflow = Boolean(currentUser?.role && WORKFLOW_ROLES.includes(currentUser.role))
 
   const parcelId = parcel?.id ?? null
 
@@ -79,6 +86,26 @@ export function ParcelDetailSheet() {
     }
   }
 
+  const handleStartVerification = async () => {
+    if (!parcel) return
+    try {
+      await transition({ id: parcel.id, status: "UNDER_VERIFICATION" })
+      toast.success("Vérification démarrée.")
+    } catch {
+      toast.error("Action non autorisée ou indisponible. Vérifiez vos droits puis réessayez.")
+    }
+  }
+
+  const handleReject = async () => {
+    if (!parcel) return
+    try {
+      await transition({ id: parcel.id, status: "REJECTED" })
+      toast.success("Dossier rejeté.")
+    } catch {
+      toast.error("Action non autorisée ou indisponible. Vérifiez vos droits puis réessayez.")
+    }
+  }
+
   const handleDownloadPdf = () => {
     if (!parcel) return
     window.open(parcelsApi.getTitlePdfUrl(parcel.id), "_blank")
@@ -104,14 +131,14 @@ export function ParcelDetailSheet() {
         parcel.createdAt && {
           at: parcel.createdAt,
           title: "Enregistrement de la parcelle au registre",
-          tone: "bg-white/70",
+          tone: "bg-muted-foreground/40",
         },
       ].filter((e): e is { at: string; title: string; tone: string } => Boolean(e))
     : []
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && close()}>
-      <SheetContent className="sm:max-w-2xl overflow-y-auto p-0 border-l border-white/10 bg-black/95 backdrop-blur-2xl">
+      <SheetContent className="sm:max-w-2xl overflow-y-auto p-0 border-l border-border bg-card">
         <AppErrorBoundary name="Détails de la parcelle">
           {isLoading ? (
             <div className="h-full flex items-center justify-center">
@@ -128,26 +155,29 @@ export function ParcelDetailSheet() {
                   <span className="text-muted-foreground text-xs font-mono">{parcel.reference}</span>
                 </div>
                 <SheetTitle className="text-3xl font-bold tracking-tight">{parcel.name}</SheetTitle>
+                <SheetDescription className="sr-only">
+                  Fiche détaillée de la parcelle {parcel.name} ({parcel.reference}) : statut, surveillance, historique, documents, ancrages blockchain et succession.
+                </SheetDescription>
               </SheetHeader>
 
               <Tabs value={activeTab} onValueChange={setTab} className="w-full">
-                <TabsList className="grid grid-cols-6 w-full bg-white/5 p-1 rounded-xl border border-white/10">
-                  <TabsTrigger value="overview" className="text-[10px] uppercase gap-1.5 rounded-lg data-[state=active]:bg-emerald data-[state=active]:text-white">
+                <TabsList className="grid grid-cols-6 w-full bg-secondary p-1 rounded-xl border border-border">
+                  <TabsTrigger value="overview" className="text-[10px] uppercase gap-1.5 rounded-lg text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                     <Globe className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Général</span>
                   </TabsTrigger>
-                  <TabsTrigger value="monitoring" className="text-[10px] uppercase gap-1.5 rounded-lg data-[state=active]:bg-emerald data-[state=active]:text-white">
+                  <TabsTrigger value="monitoring" className="text-[10px] uppercase gap-1.5 rounded-lg text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                     <Shield className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Surv.</span>
                   </TabsTrigger>
-                  <TabsTrigger value="history" className="text-[10px] uppercase gap-1.5 rounded-lg data-[state=active]:bg-emerald data-[state=active]:text-white">
+                  <TabsTrigger value="history" className="text-[10px] uppercase gap-1.5 rounded-lg text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                     <History className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Hist.</span>
                   </TabsTrigger>
-                  <TabsTrigger value="documents" className="text-[10px] uppercase gap-1.5 rounded-lg data-[state=active]:bg-emerald data-[state=active]:text-white">
+                  <TabsTrigger value="documents" className="text-[10px] uppercase gap-1.5 rounded-lg text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                     <FileText className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Docs</span>
                   </TabsTrigger>
-                  <TabsTrigger value="blockchain" className="text-[10px] uppercase gap-1.5 rounded-lg data-[state=active]:bg-emerald data-[state=active]:text-white">
+                  <TabsTrigger value="blockchain" className="text-[10px] uppercase gap-1.5 rounded-lg text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                     <LinkIcon className="h-3.5 w-3.5" /> <span className="hidden sm:inline">BC</span>
                   </TabsTrigger>
-                  <TabsTrigger value="heritage" className="text-[10px] uppercase gap-1.5 rounded-lg data-[state=active]:bg-emerald data-[state=active]:text-white">
+                  <TabsTrigger value="heritage" className="text-[10px] uppercase gap-1.5 rounded-lg text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                     <Users className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Hér.</span>
                   </TabsTrigger>
                 </TabsList>
@@ -157,64 +187,67 @@ export function ParcelDetailSheet() {
                     <div className="space-y-6">
                       <ParcelSummary parcel={parcel} />
 
-                      {/* Malian Workflow Actions */}
-                      <div className="p-4 rounded-xl border border-emerald/20 bg-emerald/5 space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-[10px] font-bold uppercase tracking-widest text-emerald flex items-center gap-2">
-                            <Shield className="h-3 w-3" /> Workflow Gouvernemental
-                          </h4>
+                      {/* Malian workflow actions — gouvernemental (agents) + retrait du titre (propriétaire). */}
+                      {(canManageWorkflow || parcel.status === "TITLE_ISSUED") && (
+                        <div className="p-4 rounded-xl border border-emerald/20 bg-emerald/5 space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-[10px] font-bold uppercase tracking-widest text-emerald flex items-center gap-2">
+                              <Shield className="h-3 w-3" />
+                              {canManageWorkflow ? "Workflow Gouvernemental" : "Titre Foncier"}
+                            </h4>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2">
+                            {canManageWorkflow && parcel.status === "SUBMITTED" && (
+                              <Button
+                                onClick={handleStartVerification}
+                                className="h-9 text-[10px] uppercase font-bold tracking-widest bg-emerald text-white hover:bg-emerald/90"
+                              >
+                                <CheckCircle2 className="h-3.5 w-3.5 mr-2" /> Démarrer Vérification
+                              </Button>
+                            )}
+
+                            {canManageWorkflow && parcel.status === "UNDER_VERIFICATION" && (
+                              <Button
+                                onClick={handleCertify}
+                                className="h-9 text-[10px] uppercase font-bold tracking-widest bg-emerald text-white hover:bg-emerald/90 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+                              >
+                                <Shield className="h-3.5 w-3.5 mr-2" /> Certifier la Parcelle
+                              </Button>
+                            )}
+
+                            {canManageWorkflow && parcel.status === "CERTIFIED" && (
+                              <Button
+                                onClick={handleIssueTitle}
+                                className="h-9 text-[10px] uppercase font-bold tracking-widest bg-emerald text-white hover:bg-emerald/90 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+                              >
+                                <FilePlus className="h-3.5 w-3.5 mr-2" /> Émettre le Titre Foncier (TF)
+                              </Button>
+                            )}
+
+                            {parcel.status === "TITLE_ISSUED" && (
+                              <Button
+                                onClick={handleDownloadPdf}
+                                className="h-9 text-[10px] uppercase font-bold tracking-widest bg-primary text-primary-foreground hover:bg-primary/90"
+                              >
+                                <Download className="h-3.5 w-3.5 mr-2" /> Télécharger le Titre (PDF)
+                              </Button>
+                            )}
+
+                            {canManageWorkflow && ["SUBMITTED", "UNDER_VERIFICATION"].includes(parcel.status) && (
+                              <Button
+                                variant="ghost"
+                                onClick={handleReject}
+                                className="h-9 text-[10px] uppercase font-bold tracking-widest text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              >
+                                Rejeter le dossier
+                              </Button>
+                            )}
+                          </div>
                         </div>
+                      )}
 
-                        <div className="flex flex-wrap gap-2">
-                          {parcel.status === "SUBMITTED" && (
-                            <Button
-                              onClick={() => transition({ id: parcel.id, status: "UNDER_VERIFICATION" })}
-                              className="h-9 text-[10px] uppercase font-bold tracking-widest bg-emerald text-white hover:bg-emerald/90"
-                            >
-                              <CheckCircle2 className="h-3.5 w-3.5 mr-2" /> Démarrer Vérification
-                            </Button>
-                          )}
-
-                          {parcel.status === "UNDER_VERIFICATION" && (
-                            <Button
-                              onClick={handleCertify}
-                              className="h-9 text-[10px] uppercase font-bold tracking-widest bg-emerald text-white hover:bg-emerald/90 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
-                            >
-                              <Shield className="h-3.5 w-3.5 mr-2" /> Certifier la Parcelle
-                            </Button>
-                          )}
-
-                          {parcel.status === "CERTIFIED" && (
-                            <Button
-                              onClick={handleIssueTitle}
-                              className="h-9 text-[10px] uppercase font-bold tracking-widest bg-emerald text-white hover:bg-emerald/90 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
-                            >
-                              <FilePlus className="h-3.5 w-3.5 mr-2" /> Émettre le Titre Foncier (TF)
-                            </Button>
-                          )}
-
-                          {parcel.status === "TITLE_ISSUED" && (
-                            <Button
-                              onClick={handleDownloadPdf}
-                              className="h-9 text-[10px] uppercase font-bold tracking-widest bg-white text-black hover:bg-zinc-200"
-                            >
-                              <Download className="h-3.5 w-3.5 mr-2" /> Télécharger le Titre (PDF)
-                            </Button>
-                          )}
-
-                          {["SUBMITTED", "UNDER_VERIFICATION"].includes(parcel.status) && (
-                            <Button
-                              variant="ghost"
-                              onClick={() => transition({ id: parcel.id, status: "REJECTED" })}
-                              className="h-9 text-[10px] uppercase font-bold tracking-widest text-zinc-500 hover:text-white hover:bg-red-500/10"
-                            >
-                              Rejeter le dossier
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="p-4 rounded-xl border border-white/10 bg-white/5 space-y-3">
+                      <div className="p-4 rounded-xl border border-border bg-secondary space-y-3">
                         <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                           <MapPin className="h-3 w-3" /> Localisation
                         </h4>
@@ -231,7 +264,7 @@ export function ParcelDetailSheet() {
                             asChild
                             variant="secondary"
                             size="sm"
-                            className="w-full h-8 text-[10px] gap-2 bg-white/10 hover:bg-white/20"
+                            className="w-full h-8 text-[10px] gap-2"
                           >
                             <a
                               href={`https://www.openstreetmap.org/?mlat=${parcel.centroid.latitude}&mlon=${parcel.centroid.longitude}#map=17/${parcel.centroid.latitude}/${parcel.centroid.longitude}`}
@@ -252,7 +285,7 @@ export function ParcelDetailSheet() {
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Chargement des événements…
                       </div>
                     ) : parcelEvents.length === 0 ? (
-                      <div className="p-12 text-center border border-dashed border-white/10 rounded-2xl bg-white/5">
+                      <div className="p-12 text-center border border-dashed border-border rounded-2xl bg-secondary">
                         <Shield className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-20" />
                         <p className="text-sm font-medium">Aucun événement de surveillance</p>
                         <p className="text-xs text-muted-foreground mt-2 leading-relaxed max-w-[280px] mx-auto">
@@ -266,7 +299,7 @@ export function ParcelDetailSheet() {
                           const type = resolveMonitoringTypeMeta(event.type)
                           const SeverityIcon = severity.icon
                           return (
-                            <li key={event.id} className="flex gap-3 rounded-xl border border-white/10 bg-white/5 p-4">
+                            <li key={event.id} className="flex gap-3 rounded-xl border border-border bg-card p-4 shadow-card">
                               <SeverityIcon className={`mt-0.5 h-4 w-4 shrink-0 ${severity.tone}`} />
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2">
@@ -292,7 +325,7 @@ export function ParcelDetailSheet() {
                   <TabsContent value="history" className="outline-none">
                     <div className="space-y-6 pl-2">
                       {historyEntries.map((entry) => (
-                        <div key={entry.title} className="relative pl-8 border-l border-white/10 pb-6 last:pb-0">
+                        <div key={entry.title} className="relative pl-8 border-l border-border pb-6 last:pb-0">
                           <div className={`absolute -left-[5px] top-0 h-2.5 w-2.5 rounded-full ${entry.tone}`} />
                           <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">
                             {formatDateTime(entry.at)}
@@ -304,7 +337,7 @@ export function ParcelDetailSheet() {
                   </TabsContent>
 
                   <TabsContent value="documents" className="outline-none">
-                    <div className="p-12 text-center border border-dashed border-white/10 rounded-2xl bg-white/5">
+                    <div className="p-12 text-center border border-dashed border-border rounded-2xl bg-secondary">
                       <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-20" />
                       <p className="text-sm font-medium">Consultation des pièces indisponible ici</p>
                       <p className="text-xs text-muted-foreground mt-2 leading-relaxed max-w-[300px] mx-auto">
@@ -320,7 +353,7 @@ export function ParcelDetailSheet() {
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Chargement des ancrages…
                       </div>
                     ) : !anchorRecords || anchorRecords.length === 0 ? (
-                      <div className="p-12 text-center border border-dashed border-white/10 rounded-2xl bg-white/5">
+                      <div className="p-12 text-center border border-dashed border-border rounded-2xl bg-secondary">
                         <Hexagon className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-20" />
                         <p className="text-sm font-medium">Aucun ancrage blockchain</p>
                         <p className="text-xs text-muted-foreground mt-2 leading-relaxed max-w-[300px] mx-auto">
@@ -330,15 +363,15 @@ export function ParcelDetailSheet() {
                     ) : (
                       <div className="space-y-3">
                         {anchorRecords.map((record) => (
-                          <div key={record.id} className="p-4 rounded-2xl bg-zinc-950 border border-white/5 font-mono text-[10px] break-all leading-relaxed">
-                            <p className="text-emerald/60 mb-2 flex items-center gap-2">
+                          <div key={record.id} className="p-4 rounded-2xl bg-navy border border-navy font-mono text-[10px] break-all leading-relaxed shadow-card">
+                            <p className="text-emerald mb-2 flex items-center gap-2">
                               <span className="h-1.5 w-1.5 rounded-full bg-emerald" />
                               Ancrage · {formatDateTime(record.anchoredAt)}
                             </p>
-                            <div className="space-y-1 text-zinc-400">
-                              <p><span className="text-emerald/40">EMPREINTE :</span> {record.hash}</p>
-                              <p><span className="text-emerald/40">RÉSEAU :</span> {record.network}</p>
-                              <p><span className="text-emerald/40">TRANSACTION :</span> {record.transactionId}</p>
+                            <div className="space-y-1 text-white/60">
+                              <p><span className="text-emerald/70">EMPREINTE :</span> {record.hash}</p>
+                              <p><span className="text-emerald/70">RÉSEAU :</span> {record.network}</p>
+                              <p><span className="text-emerald/70">TRANSACTION :</span> {record.transactionId}</p>
                             </div>
                           </div>
                         ))}
@@ -352,7 +385,7 @@ export function ParcelDetailSheet() {
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Chargement du plan de succession…
                       </div>
                     ) : successionQuery.data ? (
-                      <div className="p-6 border border-white/10 rounded-2xl bg-white/5 space-y-4">
+                      <div className="p-6 border border-border rounded-2xl bg-secondary space-y-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <Users className="h-5 w-5 text-emerald" />
@@ -364,27 +397,27 @@ export function ParcelDetailSheet() {
                         </div>
                         <ul className="space-y-2">
                           {successionQuery.data.heirs.map((heir) => (
-                            <li key={heir.id} className="flex items-center justify-between rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm">
+                            <li key={heir.id} className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-sm">
                               <span>{heir.fullName} <span className="text-muted-foreground">· {heir.relation}</span></span>
                               <span className="font-mono text-xs">{heir.sharePercentage}%</span>
                             </li>
                           ))}
                         </ul>
-                        <Button asChild variant="secondary" className="w-full bg-white/10 hover:bg-white/20 text-[10px] uppercase font-bold tracking-widest h-9">
+                        <Button asChild variant="secondary" className="w-full text-[10px] uppercase font-bold tracking-widest h-9">
                           <Link href="/heritage">Gérer la succession</Link>
                         </Button>
                       </div>
                     ) : (
-                      <div className="p-6 border border-orange-500/20 rounded-2xl bg-orange-500/5 space-y-4">
+                      <div className="p-6 border border-amber-200 rounded-2xl bg-amber-50 space-y-4">
                         <div className="flex items-center gap-2">
-                          <Users className="h-5 w-5 text-orange-500" />
-                          <span className="text-xs font-bold uppercase tracking-widest text-orange-500">Plan de succession foncière</span>
+                          <Users className="h-5 w-5 text-amber-600" />
+                          <span className="text-xs font-bold uppercase tracking-widest text-amber-700">Plan de succession foncière</span>
                         </div>
-                        <p className="text-xs text-orange-200/70 leading-relaxed">
+                        <p className="text-xs text-amber-800/80 leading-relaxed">
                           Aucun héritier n&apos;est actuellement désigné pour cette parcelle.
                           Configurez votre plan de succession pour assurer la transmission sécurisée de vos terres.
                         </p>
-                        <Button asChild className="w-full bg-orange-600 hover:bg-orange-700 text-white text-[10px] uppercase font-bold tracking-widest h-9">
+                        <Button asChild className="w-full bg-amber-600 hover:bg-amber-700 text-white text-[10px] uppercase font-bold tracking-widest h-9">
                           <Link href="/heritage">Configurer la succession</Link>
                         </Button>
                       </div>

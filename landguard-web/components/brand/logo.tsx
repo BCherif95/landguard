@@ -3,10 +3,12 @@ import { cn } from "@/lib/utils"
 interface LogoProps {
   className?: string
   showWordmark?: boolean
+  /** Use on dark surfaces (navy sidebar) so the wordmark stays legible. */
+  inverted?: boolean
 }
 
 /** LA BOUSSOLE wordmark — a stylized compass with cardinal points. */
-export function Logo({ className, showWordmark = true }: LogoProps) {
+export function Logo({ className, showWordmark = true, inverted = false }: LogoProps) {
   return (
     <div className={cn("flex items-center gap-2.5", className)}>
       <div className="relative flex h-8 w-8 items-center justify-center">
@@ -46,10 +48,20 @@ export function Logo({ className, showWordmark = true }: LogoProps) {
       </div>
       {showWordmark && (
         <div className="flex flex-col leading-none">
-          <span className="font-display text-[15px] font-semibold tracking-tight text-foreground">
+          <span
+            className={cn(
+              "font-display text-[15px] font-semibold tracking-tight",
+              inverted ? "text-white" : "text-foreground",
+            )}
+          >
             LA BOUSSOLE
           </span>
-          <span className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
+          <span
+            className={cn(
+              "mt-0.5 font-mono text-[9px] uppercase tracking-[0.18em]",
+              inverted ? "text-white/55" : "text-muted-foreground",
+            )}
+          >
             Land Intelligence
           </span>
         </div>

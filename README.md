@@ -32,6 +32,30 @@ npm run dev
 - API : <http://localhost:8080/api/v1>
 - OpenAPI Swagger : <http://localhost:8080/swagger-ui.html>
 
+## Comptes de démonstration (profil `dev`)
+
+Au démarrage en profil `dev` (profil par défaut), l'API crée automatiquement **un compte actif par rôle**
+via `BootstrapDevUsersInitializer`. Idempotent : les e-mails déjà présents ne sont jamais réécrits.
+
+| E-mail                 | Rôle      | Mot de passe    |
+| ---------------------- | --------- | --------------- |
+| `admin@laboussole.ml`  | `ADMIN`   | `Boussole2026!` |
+| `officer@laboussole.ml`| `OFFICER` | `Boussole2026!` |
+| `legal@laboussole.ml`  | `LEGAL`   | `Boussole2026!` |
+| `banker@laboussole.ml` | `BANKER`  | `Boussole2026!` |
+| `citizen@laboussole.ml`| `CITIZEN` | `Boussole2026!` |
+
+> ⚠️ **Développement uniquement.** Le seeder est annoté `@Profile("dev")` : il ne s'exécute
+> **jamais** en staging/production, où les comptes proviennent de `BootstrapAdminInitializer`
+> (identifiants fournis par l'environnement — aucune credential n'est jamais commitée).
+
+Réglages (dans `application.yml`, section `laboussole.bootstrap.dev-users`) :
+
+| Variable d'env                 | Défaut          | Rôle                                      |
+| ------------------------------ | --------------- | ----------------------------------------- |
+| `BOOTSTRAP_DEV_USERS_ENABLED`  | `true`          | Mettre à `false` pour désactiver le seed. |
+| `BOOTSTRAP_DEV_USERS_PASSWORD` | `Boussole2026!` | Mot de passe partagé des comptes de démo. |
+
 ## Endpoints d'authentification
 
 | Méthode | Route                       | Auth requise | Description                           |

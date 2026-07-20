@@ -101,8 +101,8 @@ export default function RegistrePage() {
         </div>
 
         {/* Toolbar */}
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card/60 p-2">
-          <div className="flex items-center gap-1 rounded-md border border-border/60 bg-background/40 p-1 text-[10px] uppercase font-bold tracking-wider">
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card p-2.5 shadow-card">
+          <div className="flex flex-wrap items-center gap-1 rounded-xl border border-border bg-secondary p-1 text-[10px] uppercase font-bold tracking-wider">
             {STATUS_FILTERS.map((f) => (
               <button
                 key={f.value}
@@ -110,8 +110,8 @@ export default function RegistrePage() {
                 onClick={() => setStatusFilter(f.value)}
                 className={
                   statusFilter === f.value
-                    ? "rounded px-2.5 py-1.5 bg-emerald text-primary-foreground"
-                    : "rounded px-2.5 py-1.5 text-muted-foreground hover:text-foreground transition-colors"
+                    ? "rounded-lg px-2.5 py-1.5 bg-primary text-primary-foreground shadow-sm"
+                    : "rounded-lg px-2.5 py-1.5 text-muted-foreground hover:bg-card hover:text-foreground transition-colors"
                 }
               >
                 {f.label}
@@ -138,15 +138,15 @@ export default function RegistrePage() {
             <Button
               variant="outline"
               size="sm"
-              className="h-9 gap-2 border-border bg-background/40 hover:bg-secondary"
+              className="h-9 gap-2"
             >
               <QrCode className="h-4 w-4" />
               Scanner QR
             </Button>
             <Button
               size="sm"
-              onClick={() => router.push("/registre/nouveau")}
-              className="h-9 gap-2 bg-emerald text-primary-foreground hover:bg-emerald/90 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+              onClick={() => router.push("/registry/new")}
+              className="h-9 gap-2 shadow-sm"
             >
               <Plus className="h-4 w-4" />
               Enregistrer un terrain
@@ -178,7 +178,7 @@ export default function RegistrePage() {
               return (
                 <article
                   key={p.id}
-                  className="group relative overflow-hidden rounded-xl border border-border bg-card/60 transition-all hover:border-emerald/40 hover:shadow-2xl hover:shadow-emerald/10"
+                  className="group relative overflow-hidden rounded-2xl border border-border bg-card shadow-card transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald/40 hover:shadow-card-lg"
                 >
                   <div
                     className="relative h-32 w-full"

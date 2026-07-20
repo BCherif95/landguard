@@ -37,12 +37,12 @@ interface NavItem {
 // cryptographique transverse.
 const primary: NavItem[] = [
   { label: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Vision Live", href: "/carte", icon: Map, badge: "LIVE" },
-  { label: "Registre foncier", href: "/registre", icon: FolderLock },
+  { label: "Vision Live", href: "/map", icon: Map, badge: "LIVE" },
+  { label: "Registre foncier", href: "/registry", icon: FolderLock },
   { label: "Certification Double Clé", href: "/verification", icon: ShieldCheck },
   { label: "Console d'instruction", href: "/certification", icon: ClipboardCheck, expertOnly: true },
   { label: "Surveillance & Alertes", href: "/surveillance", icon: Satellite },
-  { label: "Dossier de preuve", href: "/preuves", icon: FileSignature },
+  { label: "Dossier de preuve", href: "/evidence", icon: FileSignature },
   { label: "Conseil de Famille", href: "/heritage", icon: Users },
   { label: "Scellement blockchain", href: "/blockchain", icon: Link2 },
 ]
@@ -75,15 +75,15 @@ export function AppSidebar() {
   }
 
   return (
-    <aside className="hidden h-svh w-64 shrink-0 flex-col border-r border-border/60 bg-card/40 backdrop-blur-xl lg:flex">
-      <div className="flex h-16 items-center border-b border-border/60 px-5">
+    <aside className="hidden h-full w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:flex">
+      <div className="flex h-16 items-center border-b border-sidebar-border px-5">
         <Link href="/" aria-label="Accueil LA BOUSSOLE">
-          <Logo />
+          <Logo inverted />
         </Link>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Navigation principale">
-        <div className="px-2 pb-2 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+        <div className="px-2 pb-2 font-mono text-[10px] uppercase tracking-[0.22em] text-sidebar-foreground/45">
           Plateforme
         </div>
         <ul className="space-y-0.5">
@@ -98,27 +98,28 @@ export function AppSidebar() {
                 <Link
                   href={item.href}
                   className={cn(
-                    "group relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-all",
+                    "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-all",
                     active
-                      ? "bg-emerald-soft text-foreground"
-                      : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                      ? "bg-sidebar-accent font-medium text-white"
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-white",
                   )}
                 >
                   {active && (
                     <span
                       aria-hidden
-                      className="absolute inset-y-1.5 left-0 w-0.5 rounded-r bg-emerald"
+                      className="absolute inset-y-1.5 left-0 w-[3px] rounded-r bg-sidebar-primary shadow-[0_0_12px_var(--sidebar-primary)]"
                     />
                   )}
                   <item.icon
                     className={cn(
-                      "h-4 w-4 shrink-0",
-                      active ? "text-emerald" : "text-muted-foreground group-hover:text-foreground",
+                      "h-4 w-4 shrink-0 transition-colors",
+                      active ? "text-sidebar-primary" : "text-sidebar-foreground/50 group-hover:text-white",
                     )}
                   />
                   <span className="flex-1 truncate">{item.label}</span>
                   {item.badge && (
-                    <span className="ml-auto rounded bg-emerald/15 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.18em] text-emerald">
+                    <span className="ml-auto inline-flex items-center gap-1 rounded bg-sidebar-primary/20 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.18em] text-sidebar-primary">
+                      <span className="h-1.5 w-1.5 rounded-full bg-sidebar-primary animate-pulse-soft" />
                       {item.badge}
                     </span>
                   )}
@@ -130,16 +131,16 @@ export function AppSidebar() {
       </nav>
 
       {/* User card */}
-      <div className="border-t border-border/60 p-3">
-        <div className="flex items-center gap-3 rounded-lg border border-border bg-background/40 p-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-emerald to-info font-display text-xs font-medium text-primary-foreground">
+      <div className="border-t border-sidebar-border p-3">
+        <div className="flex items-center gap-3 rounded-xl border border-sidebar-border bg-sidebar-accent/40 p-2.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-emerald to-info font-display text-xs font-semibold text-white">
             {initials}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-medium text-foreground">
+            <div className="truncate text-sm font-medium text-white">
               {user?.fullName ?? "Chargement…"}
             </div>
-            <div className="truncate font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+            <div className="truncate font-mono text-[10px] uppercase tracking-[0.18em] text-sidebar-foreground/55">
               {user?.role ? ROLE_LABELS[user.role] ?? user.role : "—"}
             </div>
           </div>
@@ -147,7 +148,7 @@ export function AppSidebar() {
             type="button"
             onClick={handleLogout}
             aria-label="Se déconnecter"
-            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            className="rounded-md p-1.5 text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-white"
           >
             <LogOut className="h-4 w-4" />
           </button>

@@ -131,7 +131,7 @@ export default function VerificationPage() {
                   Parcelle concernée
                 </Label>
                 <Select
-                  value={selectedParcelId ?? undefined}
+                  value={selectedParcelId ?? ""}
                   onValueChange={(value) => setSelectedParcelId(value)}
                 >
                   <SelectTrigger aria-label="Sélectionner une parcelle">

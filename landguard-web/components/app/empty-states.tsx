@@ -20,11 +20,11 @@ export function PremiumEmptyState({
 }: EmptyStateProps) {
   return (
     <div className={cn(
-      "flex min-h-[400px] flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card/40 p-12 text-center animate-in fade-in zoom-in duration-500",
+      "flex min-h-[400px] flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card p-12 text-center shadow-card animate-in fade-in zoom-in duration-500",
       className
     )}>
-      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-secondary/50 text-muted-foreground/50 shadow-inner">
-        <Icon className="h-10 w-10" />
+      <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-emerald-soft text-emerald ring-8 ring-emerald-soft/40">
+        <Icon className="h-9 w-9" />
       </div>
       <h3 className="mt-6 font-display text-xl font-medium text-foreground tracking-tight">
         {title}

@@ -120,7 +120,7 @@ export default function VisionLivePage() {
             description="Ajoutez votre première parcelle pour démarrer la surveillance satellite et recevoir des alertes en temps réel."
             action={
               <Button asChild className="bg-emerald text-primary-foreground hover:bg-emerald/90">
-                <Link href="/registre">Enregistrer une parcelle</Link>
+                <Link href="/registry">Enregistrer une parcelle</Link>
               </Button>
             }
           />
@@ -184,7 +184,7 @@ export default function VisionLivePage() {
                   size="sm"
                   className="h-8 border-border bg-background/40 text-xs hover:bg-secondary"
                 >
-                  <Link href="/carte">Ouvrir la carte complète</Link>
+                  <Link href="/map">Ouvrir la carte complète</Link>
                 </Button>
               </div>
               <div className="aspect-[16/9]">

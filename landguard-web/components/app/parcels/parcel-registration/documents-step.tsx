@@ -142,7 +142,7 @@ export function DocumentsStep() {
                     </p>
                   )}
                   {doc.ocr?.status === 'PENDING_VERIFICATION' && doc.ocr.structuralAnomalies.length > 0 && (
-                    <p className="text-[10px] text-orange-500 leading-relaxed mt-1 max-w-md">
+                    <p className="text-[10px] text-amber-600 leading-relaxed mt-1 max-w-md">
                       Notre système a détecté une incohérence dans ce document (ex: police d'écriture non uniforme). Un expert vérifiera ce point avant certification.
                     </p>
                   )}
@@ -195,7 +195,7 @@ export function DocumentsStep() {
         />
 
         {!allUploaded && (
-          <div className="p-3 rounded-lg bg-orange-500/5 border border-orange-500/10 flex items-center gap-2 text-orange-600">
+          <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 flex items-center gap-2 text-amber-700">
             <AlertCircle className="h-4 w-4" />
             <span className="text-[10px] font-medium uppercase tracking-wider">
               Tous les documents sont requis pour la certification

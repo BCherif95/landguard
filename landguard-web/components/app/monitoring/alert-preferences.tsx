@@ -24,7 +24,7 @@ function ChannelRow({ id, icon, label, hint, checked, onCheckedChange }: Channel
       <div className="flex items-start gap-3">
         <span className="mt-0.5 text-primary">{icon}</span>
         <div>
-          <Label htmlFor={id} className="text-sm font-medium text-white cursor-pointer">
+          <Label htmlFor={id} className="text-sm font-medium text-foreground cursor-pointer">
             {label}
           </Label>
           <p className="text-[11px] text-muted-foreground leading-relaxed">{hint}</p>
@@ -64,10 +64,10 @@ export function AlertPreferences() {
   }
 
   return (
-    <Card className="p-5 bg-black/60 backdrop-blur-2xl border-primary/20 space-y-4">
+    <Card className="p-5 bg-card border-border shadow-card space-y-4">
       <div className="flex items-center gap-2">
         <BellRing className="w-4 h-4 text-primary" />
-        <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white">
+        <h3 className="text-xs font-black uppercase tracking-[0.2em] text-foreground">
           Préférences d'alerte
         </h3>
       </div>
@@ -79,7 +79,7 @@ export function AlertPreferences() {
         </div>
       ) : (
         <>
-          <div className="divide-y divide-white/5">
+          <div className="divide-y divide-border">
             <ChannelRow
               id="alert-channel-push"
               icon={<Smartphone className="w-4 h-4" />}
@@ -117,10 +117,10 @@ export function AlertPreferences() {
                 placeholder="+223XXXXXXXX"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
-                className="bg-black/40 border-white/10 font-mono text-xs"
+                className="font-mono text-xs"
               />
               {smsMissingPhone && (
-                <p className="text-[10px] text-orange-400">
+                <p className="text-[10px] text-amber-600">
                   Un numéro de mobile est requis pour activer les SMS d'urgence.
                 </p>
               )}

@@ -6,9 +6,9 @@ import { AppErrorBoundary } from "@/components/app/error-boundary"
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <AuthGuard>
-      <div className="flex min-h-svh bg-background">
+      <div className="flex h-svh overflow-hidden bg-background">
         <AppSidebar />
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
           <AppErrorBoundary name="Application">
             {children}
           </AppErrorBoundary>

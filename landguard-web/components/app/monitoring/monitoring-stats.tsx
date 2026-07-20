@@ -20,7 +20,7 @@ export function MonitoringStats() {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       {stats.map((stat, i) => (
-        <Card key={i} className="p-4 bg-background/50 backdrop-blur-md border-primary/10">
+        <Card key={i} className="p-4 bg-card border-border shadow-card">
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-lg ${stat.bg}`}>
               <stat.icon className={`w-5 h-5 ${stat.color}`} />
@@ -29,7 +29,7 @@ export function MonitoringStats() {
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
                 {stat.label}
               </p>
-              <p className="text-2xl font-black font-mono">
+              <p className="text-2xl font-black font-mono text-foreground tabular-nums">
                 {stat.value.toString().padStart(2, '0')}
               </p>
             </div>

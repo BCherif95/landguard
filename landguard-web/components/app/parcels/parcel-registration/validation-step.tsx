@@ -60,7 +60,7 @@ export function ValidationStep() {
           {uploadedDocuments.map((doc) => {
             const ocr = doc.ocr
             return (
-              <div key={doc.type} className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2">
+              <div key={doc.type} className="p-4 rounded-xl bg-secondary border border-border space-y-2">
                 <div className="flex items-center gap-2">
                   <FileText className="h-4 w-4 text-emerald shrink-0" />
                   <p className="text-sm font-medium">{doc.label}</p>
@@ -90,7 +90,7 @@ export function ValidationStep() {
                       </p>
                     )}
                     {ocr.structuralAnomalies.length > 0 && (
-                      <p className="text-[11px] text-orange-500 leading-relaxed">
+                      <p className="text-[11px] text-amber-600 leading-relaxed">
                         Une incohérence a été détectée dans ce document. Un agent habilité
                         examinera ce point avant toute certification.
                       </p>
@@ -114,14 +114,14 @@ export function ValidationStep() {
 
         {/* Real cross-checks between OCR readings and the form input */}
         {advisories.length > 0 && (
-          <div className="p-4 rounded-xl bg-orange-500/5 border border-orange-500/20 space-y-2">
+          <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 space-y-2">
             <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-orange-500 shrink-0" />
-              <p className="text-sm font-bold text-orange-500 uppercase tracking-tight">Points de vigilance</p>
+              <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+              <p className="text-sm font-bold text-amber-700 uppercase tracking-tight">Points de vigilance</p>
             </div>
             <ul className="space-y-1 pl-6">
               {advisories.map((note) => (
-                <li key={note} className="text-[11px] text-orange-200/80 leading-relaxed list-disc">
+                <li key={note} className="text-[11px] text-amber-800/90 leading-relaxed list-disc">
                   {note}
                 </li>
               ))}
@@ -134,8 +134,8 @@ export function ValidationStep() {
         )}
 
         {/* Honest status: no automatic certification exists at this stage */}
-        <div className="p-4 rounded-xl bg-white/5 border border-white/10 flex items-start gap-4">
-          <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center shrink-0">
+        <div className="p-4 rounded-xl bg-secondary border border-border flex items-start gap-4">
+          <div className="h-8 w-8 rounded-full bg-card border border-border flex items-center justify-center shrink-0">
             <Hourglass className="h-4 w-4 text-muted-foreground" />
           </div>
           <div>
@@ -150,10 +150,10 @@ export function ValidationStep() {
       </div>
 
       <div className="flex gap-3 mt-6">
-        <Button variant="ghost" onClick={prevStep} className="flex-1 text-zinc-500">
+        <Button variant="ghost" onClick={prevStep} className="flex-1 text-muted-foreground hover:text-foreground">
           Précédent
         </Button>
-        <Button onClick={nextStep} className="flex-1 bg-white text-black hover:bg-zinc-200 h-11 font-bold uppercase tracking-widest">
+        <Button onClick={nextStep} size="lg" className="flex-1 font-semibold uppercase tracking-widest">
           Continuer
         </Button>
       </div>

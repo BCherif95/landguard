@@ -12,12 +12,12 @@ interface SuccessionTimelineProps {
 
 const EVENT_CONFIG: Record<SuccessionAuditType, { icon: LucideIcon, color: string, label: string }> = {
   PLAN_CREATED: { icon: FileText, color: "text-blue-500", label: "Plan de Succession Initié" },
-  HEIR_ADDED: { icon: UserPlus, color: "text-indigo-500", label: "Héritier Enregistré" },
+  HEIR_ADDED: { icon: UserPlus, color: "text-emerald-500", label: "Héritier Enregistré" },
   HEIR_REMOVED: { icon: AlertTriangle, color: "text-amber-500", label: "Héritier Retiré" },
-  SUBMITTED_FOR_VOTING: { icon: Vote, color: "text-purple-500", label: "Soumis au Vote" },
+  SUBMITTED_FOR_VOTING: { icon: Vote, color: "text-amber-500", label: "Soumis au Vote" },
   VOTE_CAST: { icon: CheckCircle2, color: "text-emerald-500", label: "Vote Effectué" },
   PLAN_VALIDATED: { icon: Shield, color: "text-emerald-600", label: "Plan Validé par tous" },
-  BLOCKCHAIN_ANCHORED: { icon: Lock, color: "text-indigo-600", label: "Ancrage Blockchain" },
+  BLOCKCHAIN_ANCHORED: { icon: Lock, color: "text-emerald-600", label: "Ancrage Blockchain" },
   PLAN_REJECTED: { icon: AlertTriangle, color: "text-red-600", label: "Plan Rejeté" },
   OWNERSHIP_TRANSFERRED: { icon: CheckCircle2, color: "text-emerald-600", label: "Propriété Transférée" },
   ASSET_TRANSFERRED: { icon: CheckCircle2, color: "text-emerald-600", label: "Transfert Finalisé" },

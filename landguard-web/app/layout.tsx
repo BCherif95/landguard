@@ -32,7 +32,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: "#0a1020",
+  themeColor: "#F4F5F7",
   width: "device-width",
   initialScale: 1,
 }
@@ -45,13 +45,13 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`${jakarta.variable} ${jetBrainsMono.variable} dark bg-background`}
+      className={`${jakarta.variable} ${jetBrainsMono.variable} bg-background`}
       suppressHydrationWarning
     >
       <body className="font-sans antialiased bg-background text-foreground min-h-screen">
         <QueryProvider>
           <AuthBootstrap>{children}</AuthBootstrap>
-          <Toaster theme="dark" richColors position="top-right" />
+          <Toaster theme="light" richColors position="top-right" />
         </QueryProvider>
         {process.env.NODE_ENV === "production" && <Analytics />}
       </body>

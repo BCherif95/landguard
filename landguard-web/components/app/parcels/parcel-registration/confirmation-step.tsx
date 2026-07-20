@@ -64,7 +64,7 @@ export function ConfirmationStep() {
           />
           <SummaryRow
             icon={Shapes}
-            iconClass="bg-purple-500/10 text-purple-500"
+            iconClass="bg-gold/10 text-gold"
             label="Empreinte spatiale"
             value={
               formData.geometry
@@ -111,11 +111,11 @@ export function ConfirmationStep() {
         </div>
 
         {error && (
-          <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/20 flex items-start gap-3">
-            <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+          <div className="p-4 rounded-xl bg-red-50 border border-red-200 flex items-start gap-3">
+            <AlertCircle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-bold text-red-500">L&apos;enregistrement a échoué</p>
-              <p className="text-[11px] text-red-200/80 mt-0.5 leading-relaxed">
+              <p className="text-sm font-bold text-red-700">L&apos;enregistrement a échoué</p>
+              <p className="text-[11px] text-red-700/80 mt-0.5 leading-relaxed">
                 Vérifiez votre connexion et réessayez. Si le problème persiste, vos données
                 saisies restent conservées dans ce formulaire.
               </p>
@@ -125,12 +125,13 @@ export function ConfirmationStep() {
       </div>
 
       <div className="flex gap-3">
-        <Button variant="ghost" onClick={prevStep} className="flex-1 text-zinc-500" disabled={isLoading}>
+        <Button variant="ghost" onClick={prevStep} className="flex-1 text-muted-foreground hover:text-foreground" disabled={isLoading}>
           Précédent
         </Button>
         <Button
           onClick={() => register()}
-          className="flex-1 bg-emerald text-white hover:bg-emerald/90 shadow-[0_0_20px_rgba(16,185,129,0.3)] h-11 font-bold uppercase tracking-widest"
+          size="lg"
+          className="flex-1 shadow-md font-semibold uppercase tracking-widest"
           disabled={isLoading}
         >
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

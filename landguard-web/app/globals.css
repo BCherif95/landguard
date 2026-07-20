@@ -4,73 +4,126 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
-  LA BOUSSOLE — Premium dark command-center theme
-  Palette
-  - Carbon black background
-  - Deep navy surfaces
-  - Emerald primary
-  - Off-white foreground
-  - Discreet gold accent
+  LA BOUSSOLE — Clear, professional SaaS system (cahier des charges §5.1)
+  Charte graphique & psychologie des couleurs
+  - Bleu Marine  #0B192C  → Confiance & Sécurité (texte, chrome, marques de confiance)
+  - Vert Émeraude #00875A → Conformité (action primaire, statuts validés)
+  - Rouge Alerte  #D32F2F → Anomalie (litige, danger, intrusion)
+  - Gris Technique #F4F5F7 → Fonds Dashboard
+  Principe : scannabilité, très haute lisibilité, épuré, mobile-first.
 */
 
 :root {
-  /* Light mode is intentionally minimal — the product lives in dark mode. */
-  --background: oklch(0.985 0.005 240);
-  --foreground: oklch(0.16 0.02 250);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.16 0.02 250);
+  /* Canvas — gris technique du cahier */
+  --background: oklch(0.971 0.002 247);      /* #F4F5F7 */
+  --foreground: oklch(0.23 0.035 258);       /* navy #0B192C */
+
+  /* Surfaces — cartes blanches sur canvas gris */
+  --card: oklch(1 0 0);                       /* #FFFFFF */
+  --card-foreground: oklch(0.23 0.035 258);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.16 0.02 250);
-  --primary: oklch(0.62 0.16 158);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.96 0.01 240);
-  --secondary-foreground: oklch(0.16 0.02 250);
-  --muted: oklch(0.96 0.01 240);
-  --muted-foreground: oklch(0.5 0.02 250);
-  --accent: oklch(0.78 0.13 85);
-  --accent-foreground: oklch(0.16 0.02 250);
-  --destructive: oklch(0.6 0.22 27);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.9 0.01 240);
-  --input: oklch(0.9 0.01 240);
-  --ring: oklch(0.62 0.16 158);
-  --gold: oklch(0.78 0.13 85);
-  --emerald: oklch(0.62 0.16 158);
-  --navy: oklch(0.22 0.04 255);
-  --carbon: oklch(0.12 0.015 255);
-  --radius: 0.875rem;
+  --popover-foreground: oklch(0.23 0.035 258);
+
+  /* Primaire — émeraude conformité (#00875A) : action, aller, sécurisé */
+  --primary: oklch(0.56 0.108 162);
+  --primary-foreground: oklch(0.995 0.003 160);
+
+  /* Secondaire / muted — gris techniques */
+  --secondary: oklch(0.955 0.004 247);
+  --secondary-foreground: oklch(0.28 0.03 258);
+  --muted: oklch(0.962 0.003 247);
+  --muted-foreground: oklch(0.52 0.02 254);   /* slate lisible sur blanc */
+
+  /* Accent — voile émeraude pour survols */
+  --accent: oklch(0.955 0.03 162);
+  --accent-foreground: oklch(0.30 0.06 165);
+
+  /* Anomalie — rouge alerte #D32F2F */
+  --destructive: oklch(0.575 0.214 27);
+  --destructive-foreground: oklch(0.995 0.01 20);
+
+  /* Traits & champs — hairlines discrètes */
+  --border: oklch(0.912 0.005 250);
+  --input: oklch(0.9 0.006 250);
+  --ring: oklch(0.56 0.108 162);
+
+  /* Marque & sémantique */
+  --navy: oklch(0.23 0.035 258);             /* #0B192C */
+  --navy-soft: oklch(0.23 0.035 258 / 0.06);
+  --emerald: oklch(0.56 0.108 162);          /* #00875A */
+  --emerald-soft: oklch(0.56 0.108 162 / 0.12);
+  --gold: oklch(0.74 0.13 78);               /* accent premium discret */
+  --gold-soft: oklch(0.74 0.13 78 / 0.14);
+  --carbon: oklch(0.19 0.03 258);
+  --danger: oklch(0.575 0.214 27);           /* #D32F2F */
+  --danger-soft: oklch(0.575 0.214 27 / 0.1);
+  --warning: oklch(0.72 0.16 62);
+  --warning-soft: oklch(0.72 0.16 62 / 0.14);
+  --info: oklch(0.56 0.13 246);
+  --info-soft: oklch(0.56 0.13 246 / 0.12);
+
+  /* Sidebar — bleu marine « Confiance & Sécurité » (chrome sombre premium) */
+  --sidebar: oklch(0.23 0.035 258);          /* navy #0B192C */
+  --sidebar-foreground: oklch(0.9 0.01 250);
+  --sidebar-primary: oklch(0.62 0.12 162);
+  --sidebar-primary-foreground: oklch(0.15 0.02 258);
+  --sidebar-accent: oklch(0.29 0.035 258);
+  --sidebar-accent-foreground: oklch(0.97 0.005 250);
+  --sidebar-border: oklch(0.34 0.03 258 / 0.5);
+  --sidebar-ring: oklch(0.62 0.12 162);
+
+  --radius: 0.75rem;
+
+  /* Elevation — ombres douces de SaaS clair */
+  --shadow-color: 220 30% 18%;
+  --shadow-xs: 0 1px 2px 0 hsl(var(--shadow-color) / 0.06);
+  --shadow-sm: 0 1px 3px 0 hsl(var(--shadow-color) / 0.08), 0 1px 2px -1px hsl(var(--shadow-color) / 0.06);
+  --shadow-md: 0 4px 12px -2px hsl(var(--shadow-color) / 0.1), 0 2px 6px -2px hsl(var(--shadow-color) / 0.06);
+  --shadow-lg: 0 12px 28px -6px hsl(var(--shadow-color) / 0.14), 0 6px 12px -6px hsl(var(--shadow-color) / 0.08);
 }
 
-.dark,
-:root {
-  /* Default the product to dark mode for the command-center aesthetic. */
-  --background: oklch(0.13 0.018 255);
-  --foreground: oklch(0.97 0.005 240);
-  --card: oklch(0.17 0.022 255);
-  --card-foreground: oklch(0.97 0.005 240);
-  --popover: oklch(0.17 0.022 255);
-  --popover-foreground: oklch(0.97 0.005 240);
-  --primary: oklch(0.7 0.17 158);
-  --primary-foreground: oklch(0.13 0.018 255);
-  --secondary: oklch(0.22 0.025 255);
-  --secondary-foreground: oklch(0.97 0.005 240);
-  --muted: oklch(0.21 0.022 255);
-  --muted-foreground: oklch(0.68 0.015 250);
-  --accent: oklch(0.82 0.13 85);
-  --accent-foreground: oklch(0.13 0.018 255);
-  --destructive: oklch(0.65 0.22 27);
-  --destructive-foreground: oklch(0.97 0.005 240);
-  --border: oklch(0.27 0.025 255 / 0.6);
-  --input: oklch(0.27 0.025 255);
-  --ring: oklch(0.7 0.17 158);
-  --gold: oklch(0.82 0.13 85);
-  --emerald: oklch(0.7 0.17 158);
-  --emerald-soft: oklch(0.7 0.17 158 / 0.18);
-  --navy: oklch(0.22 0.04 255);
-  --carbon: oklch(0.1 0.018 255);
-  --danger: oklch(0.68 0.22 27);
-  --warning: oklch(0.82 0.16 70);
-  --info: oklch(0.7 0.13 230);
+.dark {
+  /* Mode nuit optionnel — « terrain » sombre, mêmes sémantiques */
+  --background: oklch(0.15 0.02 258);
+  --foreground: oklch(0.96 0.006 247);
+  --card: oklch(0.19 0.024 258);
+  --card-foreground: oklch(0.96 0.006 247);
+  --popover: oklch(0.19 0.024 258);
+  --popover-foreground: oklch(0.96 0.006 247);
+  --primary: oklch(0.66 0.13 162);
+  --primary-foreground: oklch(0.15 0.02 258);
+  --secondary: oklch(0.24 0.026 258);
+  --secondary-foreground: oklch(0.96 0.006 247);
+  --muted: oklch(0.23 0.024 258);
+  --muted-foreground: oklch(0.7 0.015 250);
+  --accent: oklch(0.28 0.04 165);
+  --accent-foreground: oklch(0.96 0.006 247);
+  --destructive: oklch(0.63 0.2 27);
+  --destructive-foreground: oklch(0.97 0.006 247);
+  --border: oklch(0.3 0.025 258 / 0.6);
+  --input: oklch(0.3 0.025 258);
+  --ring: oklch(0.66 0.13 162);
+  --navy: oklch(0.23 0.035 258);
+  --navy-soft: oklch(0.7 0.03 250 / 0.08);
+  --emerald: oklch(0.66 0.13 162);
+  --emerald-soft: oklch(0.66 0.13 162 / 0.16);
+  --gold: oklch(0.8 0.13 78);
+  --gold-soft: oklch(0.8 0.13 78 / 0.16);
+  --carbon: oklch(0.12 0.02 258);
+  --danger: oklch(0.66 0.2 27);
+  --danger-soft: oklch(0.66 0.2 27 / 0.16);
+  --warning: oklch(0.8 0.15 68);
+  --warning-soft: oklch(0.8 0.15 68 / 0.16);
+  --info: oklch(0.68 0.13 240);
+  --info-soft: oklch(0.68 0.13 240 / 0.16);
+  --sidebar: oklch(0.13 0.02 258);
+  --sidebar-foreground: oklch(0.9 0.01 250);
+  --sidebar-primary: oklch(0.66 0.13 162);
+  --sidebar-primary-foreground: oklch(0.13 0.02 258);
+  --sidebar-accent: oklch(0.22 0.026 258);
+  --sidebar-accent-foreground: oklch(0.96 0.006 247);
+  --sidebar-border: oklch(0.3 0.025 258 / 0.6);
+  --sidebar-ring: oklch(0.66 0.13 162);
 }
 
 @theme inline {
@@ -99,24 +152,44 @@
   --color-ring: var(--ring);
 
   --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
   --color-emerald: var(--emerald);
   --color-emerald-soft: var(--emerald-soft);
   --color-navy: var(--navy);
+  --color-navy-soft: var(--navy-soft);
   --color-carbon: var(--carbon);
   --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
   --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
   --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 
   --color-chart-1: var(--emerald);
-  --color-chart-2: var(--gold);
-  --color-chart-3: var(--info);
-  --color-chart-4: oklch(0.78 0.16 320);
+  --color-chart-2: var(--info);
+  --color-chart-3: var(--gold);
+  --color-chart-4: oklch(0.6 0.16 300);
   --color-chart-5: var(--danger);
 
-  --radius-sm: calc(var(--radius) - 6px);
-  --radius-md: calc(var(--radius) - 3px);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 6px);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
 }
 
 @layer base {
@@ -129,7 +202,6 @@
   h1, h2, h3 {
     letter-spacing: -0.02em;
   }
-  /* Selection */
   ::selection {
     background: var(--emerald-soft);
     color: var(--foreground);
@@ -149,64 +221,65 @@
     text-wrap: pretty;
   }
 
-  /* Subtle glassmorphism panel */
+  /* Elevation helpers */
+  .shadow-card {
+    box-shadow: var(--shadow-sm);
+  }
+  .shadow-card-md {
+    box-shadow: var(--shadow-md);
+  }
+  .shadow-card-lg {
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* Frosted panel for light surfaces */
   .glass {
-    background: color-mix(in oklab, var(--card) 75%, transparent);
+    background: color-mix(in oklab, var(--card) 82%, transparent);
     backdrop-filter: blur(14px) saturate(140%);
     -webkit-backdrop-filter: blur(14px) saturate(140%);
-    border: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
+    border: 1px solid var(--border);
   }
 
-  /* Hairline borders for premium feel */
+  /* Hairline borders */
   .hairline {
-    border: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
+    border: 1px solid var(--border);
   }
 
-  /* Subtle topographic / cartographic grid */
+  /* Cartographic grid — very light on the technical-gray canvas */
   .bg-grid {
     background-image:
-      linear-gradient(to right, color-mix(in oklab, var(--foreground) 5%, transparent) 1px, transparent 1px),
-      linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 5%, transparent) 1px, transparent 1px);
+      linear-gradient(to right, color-mix(in oklab, var(--foreground) 4%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 4%, transparent) 1px, transparent 1px);
     background-size: 48px 48px;
   }
   .bg-grid-fine {
     background-image:
-      linear-gradient(to right, color-mix(in oklab, var(--foreground) 4%, transparent) 1px, transparent 1px),
-      linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 4%, transparent) 1px, transparent 1px);
+      linear-gradient(to right, color-mix(in oklab, var(--foreground) 3%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 3%, transparent) 1px, transparent 1px);
     background-size: 16px 16px;
   }
 
-  /* Emerald glow */
+  /* Emerald focus ring / glow (softer for light UI) */
   .glow-emerald {
     box-shadow:
-      0 0 0 1px color-mix(in oklab, var(--emerald) 35%, transparent),
-      0 10px 40px -10px color-mix(in oklab, var(--emerald) 35%, transparent);
+      0 0 0 1px color-mix(in oklab, var(--emerald) 30%, transparent),
+      0 8px 30px -12px color-mix(in oklab, var(--emerald) 50%, transparent);
+  }
+  .ring-focus {
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--emerald) 22%, transparent);
   }
 
-  .text-emerald {
-    color: var(--emerald);
-  }
-  .bg-emerald {
-    background-color: var(--emerald);
-  }
-  .bg-emerald-soft {
-    background-color: var(--emerald-soft);
-  }
-  .text-gold {
-    color: var(--gold);
-  }
-  .bg-gold {
-    background-color: var(--gold);
-  }
-  .text-danger {
-    color: var(--danger);
-  }
-  .text-warning {
-    color: var(--warning);
-  }
-  .text-info {
-    color: var(--info);
-  }
+  .text-emerald { color: var(--emerald); }
+  .bg-emerald { background-color: var(--emerald); }
+  .bg-emerald-soft { background-color: var(--emerald-soft); }
+  .text-navy { color: var(--navy); }
+  .bg-navy { background-color: var(--navy); }
+  .text-gold { color: var(--gold); }
+  .bg-gold { background-color: var(--gold); }
+  .text-danger { color: var(--danger); }
+  .bg-danger-soft { background-color: var(--danger-soft); }
+  .text-warning { color: var(--warning); }
+  .text-info { color: var(--info); }
 
   /* Animated radar sweep for satellite UI */
   @keyframes radar-sweep {

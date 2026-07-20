@@ -3,7 +3,7 @@ import { Radio } from "lucide-react"
 
 export function MonitoringRadar() {
   return (
-    <div className="relative flex items-center justify-center w-full h-full min-h-[200px] bg-black/20 rounded-xl border border-primary/10 overflow-hidden">
+    <div className="relative flex items-center justify-center w-full h-full min-h-[200px] bg-navy rounded-xl border border-border overflow-hidden shadow-card">
       {/* Radar circles */}
       {[1, 2, 3].map((i) => (
         <motion.div
@@ -43,11 +43,11 @@ export function MonitoringRadar() {
       </div>
       
       {/* Decorative grid */}
-      <div className="absolute inset-0 opacity-10 pointer-events-none" 
-        style={{ 
-          backgroundImage: 'linear-gradient(#3b82f6 1px, transparent 1px), linear-gradient(90deg, #3b82f6 1px, transparent 1px)',
+      <div className="absolute inset-0 opacity-20 pointer-events-none"
+        style={{
+          backgroundImage: 'linear-gradient(#00875A 1px, transparent 1px), linear-gradient(90deg, #00875A 1px, transparent 1px)',
           backgroundSize: '20px 20px'
-        }} 
+        }}
       />
     </div>
   )

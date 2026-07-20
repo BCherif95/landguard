@@ -41,11 +41,11 @@ export function BlockchainAnchorCard({ status, hash, onAnchor }: BlockchainAncho
   const isAnchored = status === "ANCHORED" || status === "TRANSFERRED" || status === "TITLE_ISSUED"
 
   return (
-    <Card className="overflow-hidden border-indigo-500/20 bg-indigo-500/5 dark:bg-indigo-500/10">
+    <Card className="overflow-hidden border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-500/10">
       <CardHeader className="relative pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="rounded-full bg-indigo-500/20 p-2 text-indigo-500">
+            <div className="rounded-full bg-emerald-500/20 p-2 text-emerald-500">
               <Shield className="h-5 w-5" />
             </div>
             <div>
@@ -69,14 +69,14 @@ export function BlockchainAnchorCard({ status, hash, onAnchor }: BlockchainAncho
               exit={{ opacity: 0 }}
               className="space-y-4"
             >
-              <div className="rounded-lg bg-indigo-500/10 p-4 border border-indigo-500/20">
-                <p className="text-sm text-indigo-700 dark:text-indigo-300">
+              <div className="rounded-lg bg-emerald-500/10 p-4 border border-emerald-500/20">
+                <p className="text-sm text-emerald-700 dark:text-emerald-300">
                   Ce plan de succession a été validé par tous les héritiers. Vous pouvez maintenant l&apos;ancrer sur la blockchain pour garantir son immutabilité juridique.
                 </p>
               </div>
               <Button 
                 onClick={handleAnchor} 
-                className="w-full bg-indigo-600 hover:bg-indigo-700"
+                className="w-full bg-emerald-600 hover:bg-emerald-700"
                 disabled={status !== "VALIDATED"}
               >
                 Lancer le Processus d&apos;Ancrage
@@ -92,17 +92,17 @@ export function BlockchainAnchorCard({ status, hash, onAnchor }: BlockchainAncho
               className="space-y-4"
             >
               <div className="flex items-center justify-between text-sm mb-1">
-                <span className="text-indigo-600 font-medium">{steps[step]}</span>
+                <span className="text-emerald-600 font-medium">{steps[step]}</span>
                 <span>{Math.round(((step + 1) / steps.length) * 100)}%</span>
               </div>
-              <Progress value={((step + 1) / steps.length) * 100} className="h-2 bg-indigo-500/20" />
+              <Progress value={((step + 1) / steps.length) * 100} className="h-2 bg-emerald-500/20" />
               
               <div className="grid grid-cols-4 gap-2 py-2">
                 {[0, 1, 2, 3].map((s) => (
                   <div 
                     key={s} 
                     className={`h-1 rounded-full transition-colors duration-500 ${
-                      s <= step ? "bg-indigo-500" : "bg-indigo-500/20"
+                      s <= step ? "bg-emerald-500" : "bg-emerald-500/20"
                     }`}
                   />
                 ))}
@@ -113,16 +113,16 @@ export function BlockchainAnchorCard({ status, hash, onAnchor }: BlockchainAncho
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                    className="rounded-full border-2 border-dashed border-indigo-500/50 p-8"
+                    className="rounded-full border-2 border-dashed border-emerald-500/50 p-8"
                   >
-                    <Cpu className="h-8 w-8 text-indigo-500" />
+                    <Cpu className="h-8 w-8 text-emerald-500" />
                   </motion.div>
                   <motion.div
                     animate={{ scale: [1, 1.2, 1] }}
                     transition={{ duration: 2, repeat: Infinity }}
                     className="absolute inset-0 flex items-center justify-center"
                   >
-                    <div className="h-4 w-4 rounded-full bg-indigo-500 opacity-20" />
+                    <div className="h-4 w-4 rounded-full bg-emerald-500 opacity-20" />
                   </motion.div>
                 </div>
               </div>

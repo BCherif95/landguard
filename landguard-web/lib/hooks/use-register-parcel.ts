@@ -44,7 +44,7 @@ export function useRegisterParcel() {
       closeDrawer();
       // Land the user on the register with the new parcel's full record open,
       // never on a neutral page.
-      router.push("/registre");
+      router.push("/registry");
       openDetails(created.id);
       return created;
     } catch (error) {
