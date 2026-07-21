@@ -1,1 +1,57 @@
+# ---------------------------------------------------------------------------
+# Secrets and local environment
+#
+# Every .env variant is ignored; only the .example templates are tracked. A
+# real credential must never be one `git add .` away from being committed.
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Local developer overrides holding a real database password.
+application-local.yml
+!application-local.yml.example
+
+# ---------------------------------------------------------------------------
+# Java / Maven
+# ---------------------------------------------------------------------------
+target/
+*.class
+*.jar
+*.war
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/timing.properties
+
+# ---------------------------------------------------------------------------
+# Node / Next.js
+# ---------------------------------------------------------------------------
+node_modules/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+
+# ---------------------------------------------------------------------------
+# Uploaded documents — land titles and identity papers, never in the repo
+# ---------------------------------------------------------------------------
+uploads/
+storage/
+
+# ---------------------------------------------------------------------------
+# Logs and coverage
+# ---------------------------------------------------------------------------
+*.log
+npm-debug.log*
+yarn-error.log*
+coverage/
+
+# ---------------------------------------------------------------------------
+# IDE and OS
+# ---------------------------------------------------------------------------
 .DS_Store
+.idea/
+*.iml
+.vscode/
+*.swp

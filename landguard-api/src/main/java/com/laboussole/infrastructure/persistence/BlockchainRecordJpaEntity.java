@@ -1,5 +1,6 @@
 package com.laboussole.infrastructure.persistence;
 
+import com.laboussole.domain.model.blockchain.LedgerSeal;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -27,17 +28,28 @@ public class BlockchainRecordJpaEntity {
     @Column(name = "id", nullable = false, updatable = false, length = 36)
     private UUID id;
 
+    /**
+     * Strict position in the chain. Unique in database, which is what makes a
+     * fork structurally impossible even when two anchors race.
+     */
+    @Column(name = "chain_index", nullable = false, updatable = false)
+    private long chainIndex;
+
     @Column(name = "entity_type", nullable = false)
     private String entityType;
 
     @Column(name = "entity_id", nullable = false)
     private String entityId;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(nullable = false, updatable = false, length = LedgerSeal.HASH_LENGTH)
     private String hash;
 
-    @Column(name = "previous_hash", columnDefinition = "TEXT")
+    @Column(name = "previous_hash", nullable = false, updatable = false, length = LedgerSeal.HASH_LENGTH)
     private String previousHash;
+
+    /** SHA-256 of the canonical payload; null for pre-migration rows. */
+    @Column(name = "payload_hash", updatable = false, length = 64)
+    private String payloadHash;
 
     @Column(name = "anchored_at", nullable = false)
     private Instant anchoredAt;

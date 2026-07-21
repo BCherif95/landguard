@@ -9,7 +9,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -21,10 +20,12 @@ public class BlockchainRecordRepositoryAdapter implements BlockchainRecordReposi
     public void save(BlockchainRecord record) {
         BlockchainRecordJpaEntity entity = new BlockchainRecordJpaEntity(
                 record.id(),
+                record.chainIndex(),
                 record.entityType(),
                 record.entityId(),
                 record.hash(),
                 record.previousHash(),
+                record.payloadHash(),
                 record.anchoredAt(),
                 record.network(),
                 record.transactionId()
@@ -36,7 +37,7 @@ public class BlockchainRecordRepositoryAdapter implements BlockchainRecordReposi
     public List<BlockchainRecord> findByEntityId(String entityId) {
         return repository.findByEntityId(entityId).stream()
                 .map(this::mapToDomain)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -46,20 +47,39 @@ public class BlockchainRecordRepositoryAdapter implements BlockchainRecordReposi
 
     @Override
     public List<BlockchainRecord> findMostRecent(int limit) {
+        // Ordered by chain index, not by anchoredAt: two anchors sharing a
+        // microsecond would otherwise come back in an arbitrary order.
         return repository
-                .findAll(PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "anchoredAt")))
+                .findAll(PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "chainIndex")))
                 .getContent().stream()
                 .map(this::mapToDomain)
-                .collect(Collectors.toList());
+                .toList();
+    }
+
+    @Override
+    public Optional<BlockchainRecord> lockChainHead() {
+        return repository.lockChainHead().map(this::mapToDomain);
+    }
+
+    @Override
+    public List<BlockchainRecord> findChainSlice(long fromChainIndex, int limit) {
+        return repository
+                .findByChainIndexGreaterThanEqualOrderByChainIndexAsc(
+                        fromChainIndex, PageRequest.ofSize(limit))
+                .stream()
+                .map(this::mapToDomain)
+                .toList();
     }
 
     private BlockchainRecord mapToDomain(BlockchainRecordJpaEntity entity) {
         return new BlockchainRecord(
                 entity.getId(),
+                entity.getChainIndex(),
                 entity.getEntityType(),
                 entity.getEntityId(),
                 entity.getHash(),
                 entity.getPreviousHash(),
+                entity.getPayloadHash(),
                 entity.getAnchoredAt(),
                 entity.getNetwork(),
                 entity.getTransactionId()

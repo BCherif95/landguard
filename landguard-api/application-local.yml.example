@@ -1,0 +1,22 @@
+# ---------------------------------------------------------------------------
+# Local developer overrides — LOCAL MACHINE ONLY.
+#
+#   cp application-local.yml.example application-local.yml
+#
+# `application-local.yml` is git-ignored: it is where your own MySQL password
+# lives, so it never reaches a commit. Loaded automatically when the API starts
+# from this directory (see `spring.config.import` in application.yml), and
+# simply absent in CI and in production, where everything comes from the
+# environment.
+#
+# The `dev` profile already supplies throwaway JWT and AES keys, so the database
+# password is usually the only thing you need to set here.
+#
+# Note the `local.datasource.*` prefix rather than `spring.datasource.*`: an
+# imported file ranks below the file that imports it, so writing the Spring key
+# directly here would simply be overridden. application-dev.yml reads these keys
+# as an explicit fallback instead.
+# ---------------------------------------------------------------------------
+local:
+  datasource:
+    password: votre-mot-de-passe-mysql-local

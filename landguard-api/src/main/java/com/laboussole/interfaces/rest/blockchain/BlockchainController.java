@@ -1,5 +1,6 @@
 package com.laboussole.interfaces.rest.blockchain;
 
+import com.laboussole.domain.port.in.blockchain.VerifyLedgerIntegrityUseCase;
 import com.laboussole.domain.port.out.blockchain.BlockchainRecordRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -20,9 +21,13 @@ class BlockchainController {
     private static final int MAX_LIMIT = 200;
 
     private final BlockchainRecordRepository records;
+    private final VerifyLedgerIntegrityUseCase verifyLedgerIntegrity;
 
-    BlockchainController(BlockchainRecordRepository records) {
+    BlockchainController(
+            BlockchainRecordRepository records,
+            VerifyLedgerIntegrityUseCase verifyLedgerIntegrity) {
         this.records = records;
+        this.verifyLedgerIntegrity = verifyLedgerIntegrity;
     }
 
     @Operation(summary = "List the most recent blockchain anchors. Returns an empty list when nothing has been anchored yet.")
@@ -35,5 +40,13 @@ class BlockchainController {
                 ? records.findByEntityId(entityId)
                 : records.findMostRecent(cappedLimit);
         return found.stream().map(BlockchainRecordResponse::from).toList();
+    }
+
+    @Operation(summary = "Replay the whole ledger and report whether every seal still holds. "
+            + "Returns 200 with a BROKEN status when the ledger is compromised — the verdict "
+            + "is the payload, not an HTTP error.")
+    @GetMapping("/verify")
+    public LedgerIntegrityResponse verify() {
+        return LedgerIntegrityResponse.from(verifyLedgerIntegrity.execute());
     }
 }

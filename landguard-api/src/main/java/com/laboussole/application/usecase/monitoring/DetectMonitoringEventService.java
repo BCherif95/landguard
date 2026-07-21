@@ -1,6 +1,6 @@
 package com.laboussole.application.usecase.monitoring;
 
-import com.laboussole.application.service.MultiChannelAlertRoutingService;
+import com.laboussole.application.service.AlertEnqueueService;
 import com.laboussole.domain.model.monitoring.MonitoringEvent;
 import com.laboussole.domain.port.in.DetectMonitoringEventUseCase;
 import com.laboussole.domain.port.out.MonitoringEventPublisher;
@@ -13,15 +13,15 @@ public class DetectMonitoringEventService implements DetectMonitoringEventUseCas
 
     private final MonitoringRepository repository;
     private final MonitoringEventPublisher publisher;
-    private final MultiChannelAlertRoutingService alertRouting;
+    private final AlertEnqueueService alertEnqueue;
 
     public DetectMonitoringEventService(
             MonitoringRepository repository,
             MonitoringEventPublisher publisher,
-            MultiChannelAlertRoutingService alertRouting) {
+            AlertEnqueueService alertEnqueue) {
         this.repository = repository;
         this.publisher = publisher;
-        this.alertRouting = alertRouting;
+        this.alertEnqueue = alertEnqueue;
     }
 
     @Override
@@ -39,7 +39,9 @@ public class DetectMonitoringEventService implements DetectMonitoringEventUseCas
         );
         repository.save(event);
         publisher.publish(event);
-        alertRouting.route(event);
+        // Queued, not sent: the delivery intents commit with the event, so a
+        // rollback cannot leave a phantom SMS already on its way.
+        alertEnqueue.enqueue(event);
         return event;
     }
 }

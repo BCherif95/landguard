@@ -1,0 +1,51 @@
+# ---------------------------------------------------------------------------
+# LOCAL DEVELOPMENT ONLY.
+#
+# Every value below is deliberately throwaway and world-readable. They live
+# here — and nowhere else — so that `application.yml` carries no secret at all:
+# any profile other than `dev` has no fallback and fails to start until the
+# environment supplies real values.
+#
+# Nothing in this file may ever be reused outside a developer's machine.
+# SecretsHardeningValidator rejects these values at startup on any other
+# profile, by digest, so a copy-paste into a staging environment cannot boot.
+# ---------------------------------------------------------------------------
+spring:
+  datasource:
+    url: ${DATASOURCE_URL:jdbc:mysql://localhost:3306/laboussole?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${DATASOURCE_USERNAME:root}
+    # Environment variable first, then application-local.yml. The indirection
+    # through `local.datasource.password` is deliberate: an imported file ranks
+    # BELOW the file importing it, so a value written directly to
+    # spring.datasource.password there would be overridden by this very line.
+    # Placeholder resolution, unlike document precedence, searches every source.
+    password: ${DATASOURCE_PASSWORD:${local.datasource.password:}}
+
+laboussole:
+  bootstrap:
+    # Seeds one demo account per role (admin@ / officer@ / legal@ / banker@ /
+    # citizen@ laboussole.ml). Idempotent; `dev` profile only.
+    dev-users:
+      enabled: ${BOOTSTRAP_DEV_USERS_ENABLED:true}
+      password: ${BOOTSTRAP_DEV_USERS_PASSWORD:Boussole2026!}
+  security:
+    jwt:
+      # Base64 of an explicit "do not use in production" sentence — long enough
+      # to satisfy HS384, and recognisable enough to be denied elsewhere.
+      secret: ${JWT_SECRET:ZGV2LW9ubHktc2VjcmV0LWtleS1kby1ub3QtdXNlLWluLXByb2R1Y3Rpb24tcGxlYXNl}
+      refresh-secret: ${JWT_REFRESH_SECRET:ZGV2LW9ubHktcmVmcmVzaC1zZWNyZXQta2V5LWRvLW5vdC11c2UtaW4tcHJvZHVjdGlvbg==}
+  storage:
+    # Environment variable first, then application-local.yml, then a relative
+    # fallback so a fresh checkout runs anywhere. Set `local.storage.root` in
+    # application-local.yml to point at your own document folder — the
+    # indirection is required because an imported file ranks below this one.
+    root: ${STORAGE_ROOT:${local.storage.root:./uploads}}
+    encryption:
+      # Local documents already on disk were encrypted with this key, so it
+      # must stay: changing it does not "rotate" anything, it makes every
+      # existing file permanently unreadable (AES-GCM fails the auth tag).
+      # It is development-only and already public — SecretsHardeningValidator
+      # rejects it by digest on every profile other than `dev`.
+      # A real rotation means decrypting with the old key and re-encrypting
+      # with the new one, not editing this line.
+      key: ${STORAGE_ENCRYPTION_KEY:41ZfeQFM3H8pmwc84DC6Fr1adlVtxWEZzaW+4mATJiY=}

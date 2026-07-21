@@ -28,7 +28,8 @@ class LandDocumentJpaEntity {
     @Column(name = "parcel_id", nullable = false, length = 36)
     private UUID parcelId;
 
-    @Column(nullable = false, length = 20)
+    // 32, not 20: ATTESTATION_COUTUMIERE alone is 22 characters.
+    @Column(nullable = false, length = 32)
     private String type;
 
     @Column(nullable = false, length = 200)

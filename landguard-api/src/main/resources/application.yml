@@ -3,10 +3,26 @@ spring:
     name: landguard-api
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
+    group:
+      # The demo scenario seeds fictional land records and is a development
+      # tool: activating `demo` alone left the application with no secrets at
+      # all and a cryptic "JWT secret must be at least 32 bytes". It now pulls
+      # in `dev`, so `-Dspring-boot.run.profiles=demo` works as anyone would
+      # expect. `demo` is never activated outside development.
+      demo: dev
+  config:
+    # Optional, git-ignored local overrides — where a developer puts the
+    # password of their own MySQL instance. Absent in CI and in production,
+    # where every value comes from the environment.
+    import: optional:file:./application-local.yml
   datasource:
-    url: ${DATASOURCE_URL:jdbc:mysql://localhost:3306/laboussole?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
-    username: ${DATASOURCE_USERNAME:root}
-    password: ${DATASOURCE_PASSWORD:BCherif9085}
+    # No defaults on purpose. Every credential below must come from the
+    # environment (or from application-dev.yml, which holds throwaway local
+    # values only). A deployment that forgets to set them must fail to start,
+    # not fall back to a value that is readable in the repository.
+    url: ${DATASOURCE_URL}
+    username: ${DATASOURCE_USERNAME}
+    password: ${DATASOURCE_PASSWORD}
     hikari:
       maximum-pool-size: 10
       minimum-idle: 2
@@ -57,6 +73,15 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+  health:
+    mail:
+      # An SMTP probe must not decide whether this application is healthy: the
+      # API serves every land-registry function without it, and undelivered
+      # e-mails are already tracked — with retries and a dead-letter state — in
+      # the `alert_deliveries` ledger, which is a far better signal than a
+      # connection test run once at startup. Left on, a local machine with no
+      # SMTP server reports the whole service DOWN to any orchestrator probe.
+      enabled: ${MANAGEMENT_HEALTH_MAIL_ENABLED:false}
 
 laboussole:
   bootstrap:
@@ -66,30 +91,27 @@ laboussole:
       email: ${BOOTSTRAP_ADMIN_EMAIL:}
       password: ${BOOTSTRAP_ADMIN_PASSWORD:}
       full-name: ${BOOTSTRAP_ADMIN_FULL_NAME:Administrateur}
-    # DEV PROFILE ONLY: seeds one demo account per role on startup
-    # (admin@ / officer@ / legal@ / banker@ / citizen@ laboussole.ml).
-    # Never active outside the `dev` profile. Idempotent.
-    dev-users:
-      enabled: ${BOOTSTRAP_DEV_USERS_ENABLED:true}
-      password: ${BOOTSTRAP_DEV_USERS_PASSWORD:Boussole2026!}
+    # DEV PROFILE ONLY: seeds one demo account per role on startup.
+    # Configured in application-dev.yml; never active outside `dev`.
   security:
     jwt:
       issuer: laboussole-api
       access-token-ttl: PT15M
       refresh-token-ttl: P30D
-      # 32+ bytes, base64-encoded. Override via env in any non-dev profile.
-      secret: ${JWT_SECRET:ZGV2LW9ubHktc2VjcmV0LWtleS1kby1ub3QtdXNlLWluLXByb2R1Y3Rpb24tcGxlYXNl}
-      # Dedicated signing key for refresh tokens (falls back to `secret` when empty).
-      refresh-secret: ${JWT_REFRESH_SECRET:ZGV2LW9ubHktcmVmcmVzaC1zZWNyZXQta2V5LWRvLW5vdC11c2UtaW4tcHJvZHVjdGlvbg==}
+      # 32+ bytes once base64-decoded. Environment-supplied, no fallback.
+      secret: ${JWT_SECRET}
+      # Dedicated signing key for refresh tokens, so a leaked access-token key
+      # cannot mint long-lived refresh tokens. Falls back to `secret` if blank.
+      refresh-secret: ${JWT_REFRESH_SECRET:}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
   storage:
-    root: ${STORAGE_ROOT:/Users/cherif/Projects/uploads/landguard}
+    root: ${STORAGE_ROOT}
     encryption:
       # AES-256 key for documents at rest (PRD 2.1), base64-encoded 32 bytes.
-      # Dev-only default — always override via env outside local development.
-      # Blank value disables encryption (logged loudly at startup).
-      key: ${STORAGE_ENCRYPTION_KEY:41ZfeQFM3H8pmwc84DC6Fr1adlVtxWEZzaW+4mATJiY=}
+      # Environment-supplied. A blank key disables encryption, which
+      # SecretsHardeningValidator refuses outside the dev profile.
+      key: ${STORAGE_ENCRYPTION_KEY:}
   satellite:
     sentinel2:
       # Copernicus Data Space credentials (https://dataspace.copernicus.eu).
@@ -113,6 +135,18 @@ laboussole:
   notification:
     email-from: ${ALERT_EMAIL_FROM:alertes@laboussole.ml}
     frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:3000}
+    # Durable alert queue (table `alert_deliveries`). Alerts are committed with
+    # the monitoring event, then drained here — never dispatched from memory.
+    dispatch:
+      interval-ms: ${ALERT_DISPATCH_INTERVAL_MS:10000}
+      initial-delay-ms: ${ALERT_DISPATCH_INITIAL_DELAY_MS:15000}
+      batch-size: ${ALERT_DISPATCH_BATCH_SIZE:50}
+      # 5 attempts with a 1 min base doubles to 1/2/4/8 min, then dead-letter.
+      max-attempts: ${ALERT_DISPATCH_MAX_ATTEMPTS:5}
+      base-backoff: ${ALERT_DISPATCH_BASE_BACKOFF:PT1M}
+      # An IN_FLIGHT delivery older than this is assumed abandoned by a dead
+      # worker and returned to the queue.
+      stale-after: ${ALERT_DISPATCH_STALE_AFTER:PT10M}
     sms:
       twilio:
         account-sid: ${TWILIO_ACCOUNT_SID:}
